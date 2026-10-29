@@ -1,0 +1,54 @@
+# SPPS Resin Calculator
+
+Offline web app (PWA) for solid-phase peptide synthesis planning. No account, no server: everything runs in the browser and works offline once loaded. English and Hebrew UI.
+
+## What it calculates
+
+1. **Mass balance**: synthesis scale ↔ initial dry resin, theoretical peptide–resin mass, peptide–resin loading, theoretical and expected final unprotected peptide.
+2. **Peptide MW from sequence** (optional): protected (Fmoc/tBu) and unprotected MW from the one-letter sequence, with N-terminal (H / Ac) and C-terminal (amide / acid) options.
+3. **Coupling plan**: Fmoc-AA, coupling reagent and base amounts per coupling and per residue, plus piperidine and DMF totals for the whole campaign.
+
+Projects can be saved in the browser (localStorage). The last inputs are restored automatically. Results can be copied or printed to PDF.
+
+## Formulas
+
+```
+Scale (mmol)                 = Initial dry resin (g) × Loading (mmol/g)
+Theoretical peptide–resin (g) = Resin (g) + Scale (mmol) × [Protected MW + Resin MW correction] ÷ 1000
+Peptide–resin loading         = Scale (mmol) ÷ Theoretical peptide–resin (g)
+Expected final peptide (g)    = Scale (mmol) × Unprotected MW × Yield (%) ÷ 100000
+```
+
+## Resin MW correction defaults
+
+The correction is the net mass change on attaching the peptide, relative to the protected-peptide MW as you define it. All values are editable.
+
+| Resin | Default (g/mol) | Basis |
+|---|---|---|
+| Rink Amide (AM, MBHA, PS-PEG), Sieber | −222 | Removal of the resin's Fmoc group. If the protected MW is defined as the C-terminal amide, subtract a further 17.03 (NH₃): ≈ −239.27 |
+| Wang | −18.02 | Ester bond, loss of H₂O; protected MW as free C-terminal acid |
+| 2-Chlorotrityl chloride | −36.46 | Loss of HCl; protected MW as free acid, loading for the chloride form |
+| Custom | 0 | Enter your own |
+
+## Sequence MW conventions
+
+Average residue masses. Side-chain protection: Ser/Thr/Tyr(tBu), Asp/Glu(OtBu), Lys/Trp(Boc), Asn/Gln/His/Cys(Trt), Arg(Pbf). Fmoc-AA building-block MWs are derived from the same data (e.g. Fmoc-Arg(Pbf)-OH 648.78).
+
+## Development
+
+- `calc.js`: all calculations (no DOM), shared by the page, the service worker and the tests.
+- `i18n.js`: English and Hebrew strings.
+- `app.js`, `index.html`, `styles.css`: UI.
+- `service-worker.js`: offline cache, named after `APP_VERSION` in `calc.js`. **Bump `APP_VERSION` on every release** so installed apps pick up the new files.
+
+Run the tests (Node 18+):
+
+```
+node --test
+```
+
+Run locally:
+
+```
+python3 -m http.server 8000
+```
