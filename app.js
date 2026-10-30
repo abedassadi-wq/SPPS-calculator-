@@ -327,6 +327,7 @@
     const rows = [];
     if (residues.length) {
       rows.push([t('couplingCycles'), n(plan.cycles.length, 0)]);
+      plan.aaTotals.forEach(a => rows.push([a.name + ' (×' + a.count + ')', { text: fmt(a.grams, 'g') + ' / ' + fmt(a.mmol, 'mmol'), num: true }]));
       rows.push([t('totalAA'), { text: fmt(plan.aaTotalGrams, 'g'), num: true }]);
       plan.reagentTotals.forEach(r => rows.push([r.name, { text: fmt(r.grams, 'g') + (Number.isFinite(r.mL) ? ' / ' + vol(r.mL) : ''), num: true }]));
     }
