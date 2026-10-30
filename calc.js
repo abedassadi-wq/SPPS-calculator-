@@ -9,7 +9,7 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
 
-  const APP_VERSION = '8.7';
+  const APP_VERSION = '8.8';
 
   // Average masses (g/mol)
   const H2O = 18.0153;
@@ -275,11 +275,21 @@
     const washCoupleDMF = o.resinMass * o.washCoupleVol * o.washesCouple * n * o.couplings;
     const washDeprotDMF = o.resinMass * o.washDeprotVol * o.washesDeprot * deprotCycles;
     const washDMF = washCoupleDMF + washDeprotDMF;
+    // Per amino acid: total of each distinct Fmoc building block across the whole synthesis.
+    const aaMap = {};
+    cycles.forEach(c => {
+      if (!aaMap[c.name]) aaMap[c.name] = { name: c.name, code: c.code, d: c.d, mw: c.mw, count: 0, mmol: 0, grams: 0 };
+      aaMap[c.name].count += 1;
+      aaMap[c.name].mmol += c.mmol;
+      aaMap[c.name].grams += c.grams;
+    });
+    const aaTotals = Object.keys(aaMap).map(k => aaMap[k]).sort((a, b) => a.name.localeCompare(b.name));
     return {
       cycles,
       perCoupling,
       reagentTotals,
       aaTotalGrams: cycles.reduce((s, c) => s + c.grams, 0),
+      aaTotals,
       deprotCycles,
       piperidineSolution,
       piperidine: piperidineSolution * 0.2,

@@ -167,6 +167,19 @@ test('coupling plan runs C → N and totals reagents', () => {
   close(plan.totalDMF, plan.coupleDMF + plan.washDMF + plan.piperidineSolution * 0.8);
 });
 
+test('coupling plan totals each amino acid', () => {
+  const plan = C.couplingPlan({ scale: 1, resinMass: 1, residues: C.parseSequence('AGKAG').residues, aaEq: 3, reagents: [['DIC', 3], ['HOBt', 3]] });
+  const ala = plan.aaTotals.find(a => a.name === 'Fmoc-Ala-OH');
+  const gly = plan.aaTotals.find(a => a.name === 'Fmoc-Gly-OH');
+  assert.equal(ala.count, 2);
+  assert.equal(gly.count, 2);
+  close(ala.mmol, 2 * 3);
+  close(ala.grams, 2 * C.buildingBlock('A').mw * 3 / 1000);
+  // sorted and summing to the lump total
+  assert.deepEqual(plan.aaTotals.map(a => a.name), ['Fmoc-Ala-OH', 'Fmoc-Gly-OH', 'Fmoc-Lys(Boc)-OH']);
+  close(plan.aaTotals.reduce((s, a) => s + a.grams, 0), plan.aaTotalGrams);
+});
+
 test('coupling plan can skip a pre-loaded first residue', () => {
   const plan = C.couplingPlan({ scale: 1, resinMass: 1, residues: C.parseSequence('AGK').residues, reagents: [], skipFirst: true });
   assert.deepEqual(plan.cycles.map(c => c.residue), ['G', 'A']);
