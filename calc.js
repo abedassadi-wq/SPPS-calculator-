@@ -9,7 +9,7 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
 
-  const APP_VERSION = '8.6';
+  const APP_VERSION = '8.7';
 
   // Average masses (g/mol)
   const H2O = 18.0153;
