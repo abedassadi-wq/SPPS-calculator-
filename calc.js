@@ -9,7 +9,7 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
 
-  const APP_VERSION = '8.0';
+  const APP_VERSION = '8.1';
 
   // Average masses (g/mol)
   const H2O = 18.0153;
@@ -34,7 +34,10 @@
 
   // Residue masses (average, g/mol) and standard Fmoc/tBu side-chain protection.
   // pg = mass added by the side-chain protecting group (group minus the H it replaces).
-  const PG = { tBu: 56.1063, OtBu: 56.1063, Boc: 100.1158, Trt: 242.3144, Pbf: 252.3298 };
+  const PG = {
+    tBu: 56.1063, OtBu: 56.1063, Boc: 100.1158, Trt: 242.3144, Pbf: 252.3298,
+    Mtt: 256.3410, ivDde: 206.2808, Alloc: 84.0734
+  };
   const RESIDUES = {
     G: { code: 'Gly', mass: 57.0513 },
     A: { code: 'Ala', mass: 71.0779 },
@@ -123,38 +126,123 @@
     return x.toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
   }
 
-  /* Sequence parsing: one-letter codes; whitespace, digits, dashes and dots are ignored. */
-  function parseSequence(raw) {
+  /* Non-natural residues, written in brackets in a sequence, e.g. "H[Aib]EGT". Masses are in-chain
+   * residue masses; pg is the side-chain protecting group of the usual Fmoc building block. */
+  const NONSTD = {
+    'Aib':        { code: 'Aib', mass: 85.1045 },
+    'Abu':        { code: 'Abu', mass: 85.1045 },
+    'Nle':        { code: 'Nle', mass: 113.1576 },
+    'Tle':        { code: 'Tle', mass: 113.1576 },
+    'Ahx':        { code: 'Ahx', mass: 113.1576 },
+    'bAla':       { code: 'β-Ala', mass: 71.0779, aliases: ['βAla', 'β-Ala', 'beta-Ala'] },
+    'Sar':        { code: 'Sar', mass: 71.0779 },
+    'Orn':        { code: 'Orn', mass: 114.1457, pg: 'Boc' },
+    'Dab':        { code: 'Dab', mass: 100.1191, pg: 'Boc' },
+    'Dap':        { code: 'Dap', mass: 86.0925, pg: 'Boc' },
+    'Cha':        { code: 'Cha', mass: 153.2215 },
+    '1Nal':       { code: '1-Nal', mass: 197.2325, aliases: ['1-Nal'] },
+    '2Nal':       { code: '2-Nal', mass: 197.2325, aliases: ['2-Nal', 'Nal'] },
+    'Phg':        { code: 'Phg', mass: 133.1473 },
+    'Hyp':        { code: 'Hyp', mass: 113.1146, pg: 'tBu' },
+    'Cit':        { code: 'Cit', mass: 157.1704 },
+    'Pen':        { code: 'Pen', mass: 131.1961, pg: 'Trt' },
+    'Lys(Mtt)':   { code: 'Lys', mass: 128.1723, pg: 'Mtt' },
+    'Lys(ivDde)': { code: 'Lys', mass: 128.1723, pg: 'ivDde' },
+    'Lys(Alloc)': { code: 'Lys', mass: 128.1723, pg: 'Alloc' }
+  };
+
+  // Case-insensitive lookup for bracket contents: non-natural keys and aliases, plus three-letter standard codes.
+  const BRACKET_INDEX = {};
+  Object.keys(NONSTD).forEach(key => {
+    [key].concat(NONSTD[key].aliases || []).forEach(name => { BRACKET_INDEX[name.toLowerCase()] = NONSTD[key]; });
+  });
+  Object.keys(RESIDUES).forEach(ch => { BRACKET_INDEX[RESIDUES[ch].code.toLowerCase()] = RESIDUES[ch]; });
+
+  function info(def, d, label) {
+    const pgMass = def.pg ? PG[def.pg] : 0;
+    return {
+      label, code: def.code, d, mass: def.mass, pg: def.pg || null, pgMass,
+      bbName: 'Fmoc-' + (d ? 'D-' : '') + def.code + (def.pg ? '(' + def.pg + ')' : '') + '-OH'
+    };
+  }
+
+  /* Custom residues: [{ name, mass (in-chain, unprotected), bbMW (Fmoc building block) }].
+   * The side-chain protection mass is whatever the building block carries beyond Fmoc-X-OH. */
+  function customIndex(custom) {
+    const index = {};
+    (custom || []).forEach(c => {
+      const name = String(c.name || '').trim();
+      if (!name || !(c.mass > 0) || !(c.bbMW > 0)) return;
+      const pgMass = c.bbMW - c.mass - H2O - FMOC;
+      if (pgMass < -0.5) return; // building block lighter than Fmoc-X-OH: inconsistent entry
+      index[name.toLowerCase()] = { name, mass: c.mass, pgMass: Math.max(0, pgMass), bbMW: c.bbMW };
+    });
+    return index;
+  }
+
+  /* Resolve one token: a one-letter code (lowercase = D-isomer) or the contents of [brackets]. */
+  function resolveToken(text, bracket, customIdx) {
+    if (!bracket) {
+      const up = text.toUpperCase();
+      if (!RESIDUES[up]) return null;
+      const d = text !== up && up !== 'G';
+      return info(RESIDUES[up], d, text);
+    }
+    let name = text.trim();
+    let d = false;
+    if (/^D-/i.test(name)) { d = true; name = name.slice(2); }
+    const label = '[' + text.trim() + ']';
+    const c = customIdx[name.toLowerCase()];
+    if (c) {
+      return { label, code: c.name, d, mass: c.mass, pg: null, pgMass: c.pgMass, bbName: 'Fmoc-' + (d ? 'D-' : '') + c.name + '-OH', custom: true };
+    }
+    const def = BRACKET_INDEX[name.toLowerCase()];
+    return def ? info(def, d, label) : null;
+  }
+
+  /* Sequence parsing: one-letter codes and [bracketed] non-natural or custom residues.
+   * Whitespace, digits, dashes and dots outside brackets are ignored. */
+  function parseSequence(raw, custom) {
+    const customIdx = customIndex(custom);
     const residues = [];
     const invalid = [];
-    String(raw || '').toUpperCase().replace(/[\s\-.\d]/g, '').split('').forEach((ch, i) => {
-      if (RESIDUES[ch]) residues.push(ch);
-      else invalid.push({ ch, pos: i + 1 });
-    });
+    const re = /\[([^\]]*)\]|([A-Za-z])|([\s\-.\d]+)|(.)/g;
+    const str = String(raw || '');
+    let m;
+    while ((m = re.exec(str))) {
+      if (m[3]) continue;
+      const bracket = m[1] !== undefined;
+      const text = bracket ? m[1] : (m[2] || m[4]);
+      const r = m[4] ? null : resolveToken(text, bracket, customIdx);
+      if (r) residues.push(r);
+      else invalid.push({ ch: bracket ? '[' + text + ']' : text, pos: m.index + 1 });
+    }
     return { residues, invalid };
   }
 
   /* Peptide MW from sequence.
-   * opts: { nTerm: 'H'|'Ac', cTerm: 'acid'|'amide', nFmoc: boolean (keep N-terminal Fmoc in protected MW) } */
+   * opts: { nTerm: 'H'|'Ac', cTerm: 'acid'|'amide', nFmoc: boolean (keep N-terminal Fmoc in protected MW), custom } */
   function sequenceMW(raw, opts) {
     const o = Object.assign({ nTerm: 'H', cTerm: 'amide', nFmoc: false }, opts);
-    const { residues, invalid } = parseSequence(raw);
+    const { residues, invalid } = parseSequence(raw, o.custom);
     if (!residues.length || invalid.length) return { residues, invalid, free: NaN, protected: NaN };
-    let free = residues.reduce((s, ch) => s + RESIDUES[ch].mass, 0);
+    let free = residues.reduce((s, r) => s + r.mass, 0);
     free += o.cTerm === 'acid' ? ACID_TERMINUS : AMIDE_TERMINUS;
     if (o.nTerm === 'Ac') free += ACETYL;
-    let prot = free + residues.reduce((s, ch) => s + (RESIDUES[ch].pg ? PG[RESIDUES[ch].pg] : 0), 0);
+    let prot = free + residues.reduce((s, r) => s + r.pgMass, 0);
     if (o.nFmoc && o.nTerm !== 'Ac') prot += FMOC;
     return { residues, invalid, free, protected: prot };
   }
 
-  /* Fmoc-AA-OH building block for a residue letter. */
-  function buildingBlock(ch) {
-    const r = RESIDUES[ch];
-    if (!r) return null;
-    const pg = r.pg ? PG[r.pg] : 0;
-    const name = 'Fmoc-' + r.code + (r.pg ? '(' + r.pg + ')' : '') + '-OH';
-    return { name, mw: r.mass + H2O + FMOC + pg };
+  /* Fmoc-AA-OH building block for a residue: a parsed residue, a one-letter code or a bracket name. */
+  function buildingBlock(residue, custom) {
+    let r = residue;
+    if (typeof residue === 'string') {
+      const parsed = parseSequence(residue.length > 1 && residue[0] !== '[' ? '[' + residue + ']' : residue, custom);
+      if (parsed.residues.length !== 1 || parsed.invalid.length) return null;
+      r = parsed.residues[0];
+    }
+    return { name: r.bbName, mw: r.mass + H2O + FMOC + r.pgMass };
   }
 
   /* Reagent amounts for one coupling at a given scale (mmol). */
@@ -167,17 +255,21 @@
   }
 
   /* Full coupling plan. Couplings run C→N, so cycle 1 is the C-terminal residue.
-   * opts: { scale, resinMass, residues, aaEq, reagents: [[id, eq]...], couplings (per residue),
-   *         skipFirst (first residue pre-loaded on resin), washVol, washes, deprotVol, deprots } */
+   * opts: { scale, resinMass, residues (parsed), aaEq, reagents: [[id, eq]...], couplings (per residue),
+   *         skipFirst (first residue pre-loaded on resin), deprotVol, deprots,
+   *         washCoupleVol, washesCouple (after every coupling), washDeprotVol, washesDeprot (after every deprotection) } */
   function couplingPlan(opts) {
-    const o = Object.assign({ aaEq: 3, couplings: 1, skipFirst: false, washVol: 10, washes: 5, deprotVol: 10, deprots: 2 }, opts);
+    const o = Object.assign({
+      aaEq: 3, couplings: 1, skipFirst: false, deprotVol: 10, deprots: 2,
+      washCoupleVol: 10, washesCouple: 5, washDeprotVol: 10, washesDeprot: 5
+    }, opts);
     const order = o.residues.slice().reverse();
     const cycles = [];
-    order.forEach((ch, i) => {
+    order.forEach((r, i) => {
       if (o.skipFirst && i === 0) return;
-      const bb = buildingBlock(ch);
+      const bb = buildingBlock(r);
       const mmol = o.scale * o.aaEq * o.couplings;
-      cycles.push({ cycle: cycles.length + 1, residue: ch, name: bb.name, mw: bb.mw, mmol, grams: mmol * bb.mw / 1000 });
+      cycles.push({ cycle: cycles.length + 1, residue: r.label, code: r.code, d: r.d, name: bb.name, mw: bb.mw, mmol, grams: mmol * bb.mw / 1000 });
     });
     const n = cycles.length;
     const perCoupling = o.reagents.map(([id, eq]) => reagentAmount(id, eq, o.scale));
@@ -187,22 +279,27 @@
     // Deprotections = one per coupling cycle, plus the initial Fmoc removal of the resin/first residue.
     const deprotCycles = n + 1;
     const piperidineSolution = o.resinMass * o.deprotVol * o.deprots * deprotCycles; // mL of 20% piperidine/DMF
-    const washDMF = o.resinMass * o.washVol * o.washes * (n * o.couplings + deprotCycles); // washes after each step
+    const washCoupleDMF = o.resinMass * o.washCoupleVol * o.washesCouple * n * o.couplings;
+    const washDeprotDMF = o.resinMass * o.washDeprotVol * o.washesDeprot * deprotCycles;
+    const washDMF = washCoupleDMF + washDeprotDMF;
     return {
       cycles,
       perCoupling,
       reagentTotals,
       aaTotalGrams: cycles.reduce((s, c) => s + c.grams, 0),
+      deprotCycles,
       piperidineSolution,
       piperidine: piperidineSolution * 0.2,
+      washCoupleDMF,
+      washDeprotDMF,
       washDMF,
       totalDMF: washDMF + piperidineSolution * 0.8
     };
   }
 
   return {
-    APP_VERSION, RESINS, RESIDUES, PG, REAGENTS, COUPLING_SYSTEMS,
+    APP_VERSION, RESINS, RESIDUES, NONSTD, PG, REAGENTS, COUPLING_SYSTEMS,
     constants: { H2O, NH3, HCL, FMOC, ACETYL },
-    massBalance, formatNumber, decimalsFor, parseSequence, sequenceMW, buildingBlock, reagentAmount, couplingPlan
+    massBalance, formatNumber, decimalsFor, customIndex, parseSequence, sequenceMW, buildingBlock, reagentAmount, couplingPlan
   };
 });

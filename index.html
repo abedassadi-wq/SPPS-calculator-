@@ -75,7 +75,7 @@
       <div class="grid">
         <div class="field span2">
           <label for="sequence" data-i18n="sequence">Sequence (one-letter code, N → C)</label>
-          <textarea id="sequence" rows="2" spellcheck="false" autocomplete="off" placeholder="e.g. HAEGTFTSDVSSYLEGQAAKEFIAWLVKGRG"></textarea>
+          <textarea id="sequence" rows="2" spellcheck="false" autocomplete="off" placeholder="e.g. H[Aib]EGTFTSDVSSYLEGQAAKEFIAWLVKGRG"></textarea>
         </div>
         <div class="field">
           <label for="nTerm" data-i18n="nTerm">N-terminus</label>
@@ -100,6 +100,18 @@
       </div>
       <div id="seqError" class="error" role="alert" hidden></div>
       <p class="hint" data-i18n="seqHint">Average masses. Side-chain protection: Ser/Thr/Tyr(tBu), Asp/Glu(OtBu), Lys/Trp(Boc), Asn/Gln/His/Cys(Trt), Arg(Pbf). The sequence is also used for the per-residue coupling table below.</p>
+
+      <h3 data-i18n="nonstdTitle">Non-natural amino acids</h3>
+      <p class="hint" data-i18n="nonstdHint">Write non-natural residues in square brackets. A lowercase letter or a D- prefix inside the brackets means the D-isomer. Example:</p>
+      <div class="chips"><code>H[Aib]Ea[Lys(Mtt)][D-Nal]G</code></div>
+      <p class="hint" data-i18n="nonstdBuiltIn">Built in:</p>
+      <div class="chips" id="nonstdList"></div>
+      <h3 data-i18n="customTitle">Custom residues</h3>
+      <p class="hint" data-i18n="customHint">For anything not in the list. Enter the in-chain residue mass (unprotected) and the MW of the Fmoc building block exactly as you buy it; side-chain protection is taken from the difference. Use the name in brackets in the sequence.</p>
+      <div id="customList" class="custom-list"></div>
+      <div class="actions no-print">
+        <button type="button" id="addCustom" data-i18n="addCustom">Add custom residue</button>
+      </div>
       <div class="actions no-print">
         <button type="button" id="applySeq" class="primary" data-i18n="applySeq" disabled>Use these MW values</button>
       </div>
@@ -176,12 +188,20 @@
         <input id="deprots" type="number" inputmode="numeric" min="0" step="1" value="2">
       </div>
       <div class="field">
-        <label for="washVol" data-i18n="washVol">DMF wash (mL/g resin per wash)</label>
-        <input id="washVol" type="number" inputmode="decimal" min="0" step="any" value="10">
+        <label for="washesCouple" data-i18n="washesCouple">Washes after each coupling</label>
+        <input id="washesCouple" type="number" inputmode="numeric" min="0" step="1">
       </div>
       <div class="field">
-        <label for="washes" data-i18n="washes">Washes after each step</label>
-        <input id="washes" type="number" inputmode="numeric" min="0" step="1" value="5">
+        <label for="washCoupleVol" data-i18n="washCoupleVol">DMF per coupling wash (mL/g resin)</label>
+        <input id="washCoupleVol" type="number" inputmode="decimal" min="0" step="any">
+      </div>
+      <div class="field">
+        <label for="washesDeprot" data-i18n="washesDeprot">Washes after each Fmoc removal</label>
+        <input id="washesDeprot" type="number" inputmode="numeric" min="0" step="1">
+      </div>
+      <div class="field">
+        <label for="washDeprotVol" data-i18n="washDeprotVol">DMF per deprotection wash (mL/g resin)</label>
+        <input id="washDeprotVol" type="number" inputmode="decimal" min="0" step="any">
       </div>
     </div>
     <div id="planError" class="error" role="alert" hidden></div>
@@ -195,7 +215,7 @@
 
     <h3 data-i18n="totals">Campaign totals</h3>
     <div class="table-wrap"><table id="totalsTable"></table></div>
-    <p class="hint" data-i18n="planHint">Volumes are based on initial dry resin mass and do not account for resin swelling during the synthesis. Washes are counted after every coupling and every deprotection.</p>
+    <p class="hint" data-i18n="planHint">Volumes are based on initial dry resin mass and do not account for resin swelling during the synthesis. Coupling washes are counted after every coupling (including repeat couplings); deprotection washes after every Fmoc removal, including the initial one.</p>
   </section>
 
   <div class="version" id="version"></div>

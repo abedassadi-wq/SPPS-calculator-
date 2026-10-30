@@ -35,6 +35,13 @@ h3 { font-size: 14px; margin: 22px 0 10px; color: #33445a; }
 input[type=number], textarea { direction: ltr; }
 .check { display: flex; align-items: center; gap: 9px; font-size: 13px; font-weight: 700; align-self: end; padding-bottom: 12px; }
 .check input { width: 18px; height: 18px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; direction: ltr; }
+.chips code { font-size: 12px; background: #eef2f7; border-radius: 6px; padding: 4px 7px; color: #33445a; }
+.custom-list { display: grid; gap: 10px; }
+.custom-row { display: grid; grid-template-columns: 1.2fr 1fr 1fr auto; gap: 8px; align-items: end; }
+.custom-row .field input { padding: 10px; }
+.custom-row.bad input { border-color: #d77; }
+.custom-row button { border: 1px solid #e3b4b4; color: #a42121; background: #fff; border-radius: 10px; padding: 10px 12px; font: inherit; cursor: pointer; }
 .hint { font-size: 12px; color: #66778b; line-height: 1.5; margin: 7px 0 0; }
 
 .seq { margin-top: 18px; border-top: 1px solid #e6ecf3; padding-top: 14px; }
@@ -88,6 +95,7 @@ tfoot td { font-weight: 800; border-top: 2px solid #cfd9e5; }
   .card { padding: 15px; }
   .grid, .results { gap: 10px; }
   .results.small { grid-template-columns: 1fr 1fr; }
+  .custom-row { grid-template-columns: 1fr 1fr; }
   .metric { padding: 12px; }
   .field label { font-size: 12px; }
   .field input, .field select { padding: 11px; }
