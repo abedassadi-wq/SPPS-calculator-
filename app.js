@@ -346,14 +346,48 @@
   }
 
   /* ---------- non-natural and custom residues ---------- */
-  function renderNonstdList() {
-    const box = get('nonstdList');
-    box.textContent = '';
+  /* Residue buttons. Standard residues insert their one-letter code (lowercase for D),
+   * non-natural ones insert [name] (with a D- prefix for D). Typing in the box still works. */
+  let seqCursorTouched = false;
+  function insertResidue(token) {
+    const box = get('sequence');
+    const value = box.value;
+    const at = seqCursorTouched ? box.selectionEnd : value.length;
+    box.value = value.slice(0, at) + token + value.slice(at);
+    box.selectionStart = box.selectionEnd = at + token.length;
+    calculate();
+  }
+  function deleteLastResidue() {
+    const box = get('sequence');
+    const at = seqCursorTouched ? box.selectionEnd : box.value.length;
+    const before = box.value.slice(0, at).replace(/[\s\-.\d]+$/, '');
+    const m = before.match(/\[[^\]]*\]$|.$/);
+    const cut = m ? before.length - m[0].length : 0;
+    box.value = before.slice(0, cut) + box.value.slice(at);
+    box.selectionStart = box.selectionEnd = cut;
+    calculate();
+  }
+  function padButton(label, title, onClick) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.textContent = label;
+    btn.title = title;
+    btn.addEventListener('click', onClick);
+    return btn;
+  }
+  function renderPads() {
+    const isD = () => get('padD').checked;
+    const std = get('aaPad');
+    std.textContent = '';
+    Object.keys(C.RESIDUES).sort((x, y) => C.RESIDUES[x].code.localeCompare(C.RESIDUES[y].code)).forEach(ch => {
+      std.appendChild(padButton(C.RESIDUES[ch].code, C.buildingBlock(ch).name + ' (' + ch + ')',
+        () => insertResidue(isD() && ch !== 'G' ? ch.toLowerCase() : ch)));
+    });
+    const non = get('nonstdPad');
+    non.textContent = '';
     Object.keys(C.NONSTD).forEach(key => {
-      const code = document.createElement('code');
-      code.textContent = '[' + key + ']';
-      code.title = C.buildingBlock(key).name;
-      box.appendChild(code);
+      non.appendChild(padButton(C.buildingBlock(key).name, '[' + key + ']',
+        () => insertResidue('[' + (isD() ? 'D-' : '') + key + ']')));
     });
   }
   function readCustom() {
@@ -453,7 +487,7 @@
   /* ---------- init ---------- */
   renderResinOptions();
   renderSystemOptions();
-  renderNonstdList();
+  renderPads();
   applyDefaults();
   MB_FIELDS.concat(SEQ_FIELDS, PLAN_FIELDS).forEach(id => get(id).addEventListener('input', calculate));
   ['nTerm', 'cTerm', 'nFmoc', 'skipFirst'].forEach(id => get(id).addEventListener('change', calculate));
@@ -465,6 +499,9 @@
   get('saveProject').addEventListener('click', saveProject);
   get('deleteProject').addEventListener('click', deleteProject);
   get('applySeq').addEventListener('click', applySequenceMW);
+  ['click', 'keyup', 'select'].forEach(ev => get('sequence').addEventListener(ev, () => { seqCursorTouched = true; }));
+  get('padBack').addEventListener('click', deleteLastResidue);
+  get('padClear').addEventListener('click', () => { get('sequence').value = ''; seqCursorTouched = false; calculate(); });
   get('addCustom').addEventListener('click', () => {
     const row = customRow({});
     get('customList').appendChild(row);

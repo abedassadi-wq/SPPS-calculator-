@@ -9,7 +9,7 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
 
-  const APP_VERSION = '8.1';
+  const APP_VERSION = '8.2';
 
   // Average masses (g/mol)
   const H2O = 18.0153;
@@ -35,8 +35,7 @@
   // Residue masses (average, g/mol) and standard Fmoc/tBu side-chain protection.
   // pg = mass added by the side-chain protecting group (group minus the H it replaces).
   const PG = {
-    tBu: 56.1063, OtBu: 56.1063, Boc: 100.1158, Trt: 242.3144, Pbf: 252.3298,
-    Mtt: 256.3410, ivDde: 206.2808, Alloc: 84.0734
+    tBu: 56.1063, OtBu: 56.1063, Boc: 100.1158, Trt: 242.3144, Pbf: 252.3298
   };
   const RESIDUES = {
     G: { code: 'Gly', mass: 57.0513 },
@@ -129,26 +128,14 @@
   /* Non-natural residues, written in brackets in a sequence, e.g. "H[Aib]EGT". Masses are in-chain
    * residue masses; pg is the side-chain protecting group of the usual Fmoc building block. */
   const NONSTD = {
-    'Aib':        { code: 'Aib', mass: 85.1045 },
-    'Abu':        { code: 'Abu', mass: 85.1045 },
-    'Nle':        { code: 'Nle', mass: 113.1576 },
-    'Tle':        { code: 'Tle', mass: 113.1576 },
-    'Ahx':        { code: 'Ahx', mass: 113.1576 },
-    'bAla':       { code: 'β-Ala', mass: 71.0779, aliases: ['βAla', 'β-Ala', 'beta-Ala'] },
-    'Sar':        { code: 'Sar', mass: 71.0779 },
-    'Orn':        { code: 'Orn', mass: 114.1457, pg: 'Boc' },
-    'Dab':        { code: 'Dab', mass: 100.1191, pg: 'Boc' },
-    'Dap':        { code: 'Dap', mass: 86.0925, pg: 'Boc' },
-    'Cha':        { code: 'Cha', mass: 153.2215 },
-    '1Nal':       { code: '1-Nal', mass: 197.2325, aliases: ['1-Nal'] },
-    '2Nal':       { code: '2-Nal', mass: 197.2325, aliases: ['2-Nal', 'Nal'] },
-    'Phg':        { code: 'Phg', mass: 133.1473 },
-    'Hyp':        { code: 'Hyp', mass: 113.1146, pg: 'tBu' },
-    'Cit':        { code: 'Cit', mass: 157.1704 },
-    'Pen':        { code: 'Pen', mass: 131.1961, pg: 'Trt' },
-    'Lys(Mtt)':   { code: 'Lys', mass: 128.1723, pg: 'Mtt' },
-    'Lys(ivDde)': { code: 'Lys', mass: 128.1723, pg: 'ivDde' },
-    'Lys(Alloc)': { code: 'Lys', mass: 128.1723, pg: 'Alloc' }
+    'Pen':           { code: 'Pen', mass: 131.1961, pg: 'Trt' },
+    'Sar':           { code: 'Sar', mass: 71.0779 },
+    '3Pal':          { code: '3-Pal', mass: 148.1619, aliases: ['3-Pal', 'Pal'] },                // 3-(3-pyridyl)alanine
+    '2Nal':          { code: '2-Nal', mass: 197.2325, aliases: ['2-Nal', 'Nal'] },                // 3-(2-naphthyl)alanine
+    'Thpgly':        { code: 'Thpgly', mass: 141.1677, aliases: ['Thp-Gly', 'ThpGly'] },          // (tetrahydropyran-4-yl)glycine
+    '7MeTrp':        { code: '7-MeTrp', mass: 200.2365, aliases: ['7-MeTrp', '7-Me-Trp'] },       // 7-methyltryptophan, unprotected indole
+    'Tyr(2-Boc-ea)': { code: 'Tyr(2-ea)', mass: 206.2411, pg: 'Boc', bb: 'Fmoc-Tyr(2-Boc-ea)-OH',
+                       aliases: ['Tyr(ea)', 'Tyr(2-ea)'] }                                         // O-(2-aminoethyl)tyrosine, Boc on the amine
   };
 
   // Case-insensitive lookup for bracket contents: non-natural keys and aliases, plus three-letter standard codes.
@@ -162,7 +149,9 @@
     const pgMass = def.pg ? PG[def.pg] : 0;
     return {
       label, code: def.code, d, mass: def.mass, pg: def.pg || null, pgMass,
-      bbName: 'Fmoc-' + (d ? 'D-' : '') + def.code + (def.pg ? '(' + def.pg + ')' : '') + '-OH'
+      bbName: def.bb
+        ? def.bb.replace('Fmoc-', 'Fmoc-' + (d ? 'D-' : ''))
+        : 'Fmoc-' + (d ? 'D-' : '') + def.code + (def.pg ? '(' + def.pg + ')' : '') + '-OH'
     };
   }
 
