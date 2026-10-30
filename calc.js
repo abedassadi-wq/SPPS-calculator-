@@ -9,7 +9,7 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
 
-  const APP_VERSION = '8.3';
+  const APP_VERSION = '8.4';
 
   // Average masses (g/mol)
   const H2O = 18.0153;
@@ -247,11 +247,11 @@
 
   /* Full coupling plan. Couplings run C→N, so cycle 1 is the C-terminal residue.
    * opts: { scale, resinMass, residues (parsed), aaEq, reagents: [[id, eq]...], couplings (per residue),
-   *         skipFirst (first residue pre-loaded on resin), deprotVol, deprots,
+   *         skipFirst (first residue pre-loaded on resin), coupleVol (DMF per coupling), deprotVol, deprots,
    *         washCoupleVol, washesCouple (after every coupling), washDeprotVol, washesDeprot (after every deprotection) } */
   function couplingPlan(opts) {
     const o = Object.assign({
-      aaEq: 3, couplings: 1, skipFirst: false, deprotVol: 10, deprots: 2,
+      aaEq: 3, couplings: 1, skipFirst: false, coupleVol: 10, deprotVol: 10, deprots: 2,
       washCoupleVol: 10, washesCouple: 5, washDeprotVol: 10, washesDeprot: 5
     }, opts);
     const order = o.residues.slice().reverse();
@@ -270,6 +270,8 @@
     // Deprotections = one per coupling cycle, plus the initial Fmoc removal of the resin/first residue.
     const deprotCycles = n + 1;
     const piperidineSolution = o.resinMass * o.deprotVol * o.deprots * deprotCycles; // mL of 20% piperidine/DMF
+    // DMF the Fmoc-AA and activator are dissolved in, one volume per coupling.
+    const coupleDMF = o.resinMass * o.coupleVol * n * o.couplings;
     const washCoupleDMF = o.resinMass * o.washCoupleVol * o.washesCouple * n * o.couplings;
     const washDeprotDMF = o.resinMass * o.washDeprotVol * o.washesDeprot * deprotCycles;
     const washDMF = washCoupleDMF + washDeprotDMF;
@@ -281,10 +283,11 @@
       deprotCycles,
       piperidineSolution,
       piperidine: piperidineSolution * 0.2,
+      coupleDMF,
       washCoupleDMF,
       washDeprotDMF,
       washDMF,
-      totalDMF: washDMF + piperidineSolution * 0.8
+      totalDMF: coupleDMF + washDMF + piperidineSolution * 0.8
     };
   }
 
