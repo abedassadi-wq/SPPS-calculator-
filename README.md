@@ -6,7 +6,7 @@ Offline web app (PWA) for solid-phase peptide synthesis planning. No account, no
 
 1. **Mass balance**: synthesis scale ↔ initial dry resin, theoretical peptide–resin mass, peptide–resin loading, theoretical and expected final unprotected peptide.
 2. **Peptide MW from sequence** (optional): protected (Fmoc/tBu) and unprotected MW from the one-letter sequence, with N-terminal (H / Ac) and C-terminal (amide / acid) options.
-3. **Coupling plan**: Fmoc-AA, coupling reagent and base amounts per coupling and per residue, plus piperidine and DMF totals for the whole campaign.
+3. **Coupling plan**: Fmoc-AA, coupling reagent and base amounts per coupling and per residue, plus piperidine and DMF totals for the whole campaign. Washes after coupling and after Fmoc removal are set separately (number of washes and mL/g for each).
 
 Projects can be saved in the browser (localStorage). The last inputs are restored automatically. Results can be copied or printed to PDF.
 
@@ -33,6 +33,16 @@ The correction is the net mass change on attaching the peptide, relative to the 
 ## Sequence MW conventions
 
 Average residue masses. Side-chain protection: Ser/Thr/Tyr(tBu), Asp/Glu(OtBu), Lys/Trp(Boc), Asn/Gln/His/Cys(Trt), Arg(Pbf). Fmoc-AA building-block MWs are derived from the same data (e.g. Fmoc-Arg(Pbf)-OH 648.78).
+
+### Sequence notation
+
+- One-letter codes, N → C. Spaces, digits, dashes and dots are ignored.
+- **Lowercase letter = D-amino acid** (same mass; the building block becomes Fmoc-D-…-OH).
+- **Non-natural residues in square brackets**, case-insensitive, optional `D-` prefix: `H[Aib]EG[Lys(Mtt)][D-Nal]`.
+
+Built-in non-natural residues (building block in parentheses): Aib, Abu, Nle, Tle, Ahx, bAla (β-Ala), Sar, Orn(Boc), Dab(Boc), Dap(Boc), Cha, 1Nal, 2Nal, Phg, Hyp(tBu), Cit, Pen(Trt), Lys(Mtt), Lys(ivDde), Lys(Alloc). Three-letter codes of the standard residues also work in brackets, e.g. `[Ala]`.
+
+**Custom residues**: enter a name, the in-chain residue mass (unprotected) and the MW of the Fmoc building block as purchased. The side-chain protection mass is the difference `building block − residue − H₂O − Fmoc`, so the protected MW and the coupling table both follow from those two numbers.
 
 ## Development
 

@@ -45,9 +45,51 @@ test('adaptive number formatting', () => {
 });
 
 test('sequence parsing ignores spacing and flags unknown codes', () => {
-  const r = C.parseSequence('ac-gly 12 ');
-  assert.deepEqual(r.residues, ['A', 'C', 'G', 'L', 'Y']);
+  const r = C.parseSequence('AC-GLY 12 ');
+  assert.deepEqual(r.residues.map(x => x.label), ['A', 'C', 'G', 'L', 'Y']);
   assert.deepEqual(C.parseSequence('GXB').invalid.map(x => x.ch), ['X', 'B']);
+  assert.deepEqual(C.parseSequence('A[Foo]').invalid.map(x => x.ch), ['[Foo]']);
+});
+
+test('lowercase letters are D-amino acids with the same mass', () => {
+  const r = C.parseSequence('aG');
+  assert.equal(r.residues[0].d, true);
+  assert.equal(C.buildingBlock(r.residues[0]).name, 'Fmoc-D-Ala-OH');
+  close(C.sequenceMW('aaa').free, C.sequenceMW('AAA').free, 1e-9);
+  assert.equal(C.parseSequence('g').residues[0].d, false); // glycine is achiral
+});
+
+test('non-natural residues in brackets', () => {
+  const r = C.parseSequence('H[Aib]E[d-Nal][Lys(Mtt)][orn]');
+  assert.deepEqual(r.invalid, []);
+  assert.deepEqual(r.residues.map(x => x.code), ['His', 'Aib', 'Glu', '2-Nal', 'Lys', 'Orn']);
+  assert.equal(r.residues[3].d, true);
+  // Catalogue MWs of the Fmoc building blocks
+  close(C.buildingBlock('Aib').mw, 325.36);
+  close(C.buildingBlock('Orn').mw, 454.52);
+  close(C.buildingBlock('Dab').mw, 440.49);
+  close(C.buildingBlock('Cha').mw, 393.48);
+  close(C.buildingBlock('Nal').mw, 437.49);
+  close(C.buildingBlock('Hyp').mw, 409.48);
+  close(C.buildingBlock('Lys(Mtt)').mw, 624.77);
+  close(C.buildingBlock('Lys(ivDde)').mw, 574.71);
+  close(C.buildingBlock('Lys(Alloc)').mw, 452.50);
+  assert.equal(C.buildingBlock('Lys(Mtt)').name, 'Fmoc-Lys(Mtt)-OH');
+  // Aib adds 85.10 to the chain, with no side-chain protection
+  const base = C.sequenceMW('HG');
+  const aib = C.sequenceMW('H[Aib]G');
+  close(aib.free - base.free, 85.10);
+  close(aib.protected - aib.free, base.protected - base.free);
+});
+
+test('custom residues', () => {
+  const custom = [{ name: 'Xyz', mass: 200, bbMW: 500 }];
+  const s = C.sequenceMW('G[Xyz]', { custom, cTerm: 'acid' });
+  close(s.free, 57.0513 + 200 + 18.0153, 1e-6);
+  close(s.protected - s.free, 500 - 200 - C.constants.H2O - C.constants.FMOC, 1e-6);
+  close(C.buildingBlock('Xyz', custom).mw, 500, 1e-9);
+  // A building block lighter than Fmoc-X-OH is rejected
+  assert.equal(C.parseSequence('[Bad]', [{ name: 'Bad', mass: 200, bbMW: 300 }]).invalid.length, 1);
 });
 
 test('sequence MW: known peptides (average mass)', () => {
@@ -88,9 +130,9 @@ test('reagent amounts include volume for liquids', () => {
 
 test('coupling plan runs C → N and totals reagents', () => {
   const plan = C.couplingPlan({
-    scale: 1, resinMass: 2, residues: ['A', 'G', 'K'], aaEq: 4,
+    scale: 1, resinMass: 2, residues: C.parseSequence('AGK').residues, aaEq: 4,
     reagents: [['DIC', 4], ['Oxyma', 4]], couplings: 2,
-    deprotVol: 10, deprots: 2, washVol: 10, washes: 5
+    deprotVol: 10, deprots: 2, washCoupleVol: 10, washesCouple: 5, washDeprotVol: 8, washesDeprot: 3
   });
   assert.deepEqual(plan.cycles.map(c => c.residue), ['K', 'G', 'A']);
   close(plan.cycles[0].mmol, 8);
@@ -98,12 +140,14 @@ test('coupling plan runs C → N and totals reagents', () => {
   // 3 cycles + initial deprotection, 2 treatments × 10 mL/g × 2 g
   close(plan.piperidineSolution, 4 * 2 * 10 * 2);
   close(plan.piperidine, plan.piperidineSolution * 0.2);
-  // washes after 6 couplings + 4 deprotections, 5 × 10 mL/g × 2 g each
-  close(plan.washDMF, 10 * 5 * 10 * 2);
+  // 6 couplings × 5 washes × 10 mL/g × 2 g, and 4 deprotections × 3 washes × 8 mL/g × 2 g
+  close(plan.washCoupleDMF, 6 * 5 * 10 * 2);
+  close(plan.washDeprotDMF, 4 * 3 * 8 * 2);
+  close(plan.washDMF, plan.washCoupleDMF + plan.washDeprotDMF);
 });
 
 test('coupling plan can skip a pre-loaded first residue', () => {
-  const plan = C.couplingPlan({ scale: 1, resinMass: 1, residues: ['A', 'G', 'K'], reagents: [], skipFirst: true });
+  const plan = C.couplingPlan({ scale: 1, resinMass: 1, residues: C.parseSequence('AGK').residues, reagents: [], skipFirst: true });
   assert.deepEqual(plan.cycles.map(c => c.residue), ['G', 'A']);
   assert.equal(plan.cycles[0].cycle, 1);
 });

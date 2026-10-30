@@ -16,11 +16,11 @@
   const DEFAULTS = {
     scale: '100', mass: '125', sequence: '', nTerm: 'H', cTerm: 'amide', nFmoc: false,
     system: 'dic-oxyma', aaEq: '3', couplings: '1', skipFirst: false,
-    deprotVol: '10', deprots: '2', washVol: '10', washes: '5'
+    deprotVol: '10', deprots: '2', washesCouple: '5', washCoupleVol: '10', washesDeprot: '5', washDeprotVol: '10'
   };
   const MB_FIELDS = ['loading', 'protectedMW', 'freeMW', 'correction', 'yieldPct', 'scale', 'mass'];
   const SEQ_FIELDS = ['sequence', 'nTerm', 'cTerm', 'nFmoc'];
-  const PLAN_FIELDS = ['aaEq', 'couplings', 'skipFirst', 'deprotVol', 'deprots', 'washVol', 'washes'];
+  const PLAN_FIELDS = ['aaEq', 'couplings', 'skipFirst', 'deprotVol', 'deprots', 'washesCouple', 'washCoupleVol', 'washesDeprot', 'washDeprotVol'];
   const STATE_FIELDS = ['resin'].concat(MB_FIELDS, SEQ_FIELDS, ['system'], PLAN_FIELDS);
 
   let lang = 'en';
@@ -56,6 +56,7 @@
     renderProjectOptions(get('project').value);
     renderSystemOptions();
     renderReagentEqs(currentReagentEqs());
+    renderCustom(readCustom());
     updateProjectInfo();
     updateCorrectionInfo();
     calculate();
@@ -135,12 +136,17 @@
 
   /* ---------- state snapshot ---------- */
   function snapshot() {
-    const snap = { mode, reagentEqs: currentReagentEqs() };
+    const snap = { mode, reagentEqs: currentReagentEqs(), customResidues: readCustom() };
     STATE_FIELDS.forEach(id => { snap[id] = getField(id); });
     return snap;
   }
   function applySnapshot(snap) {
+    // v8.0 had a single wash setting for both coupling and deprotection washes.
+    if (snap.washes !== undefined && snap.washesCouple === undefined) {
+      snap = Object.assign({}, snap, { washesCouple: snap.washes, washesDeprot: snap.washes, washCoupleVol: snap.washVol, washDeprotVol: snap.washVol });
+    }
     STATE_FIELDS.forEach(id => { if (snap[id] !== undefined) setField(id, snap[id]); });
+    renderCustom(snap.customResidues || []);
     if (!C.COUPLING_SYSTEMS[get('system').value]) setField('system', DEFAULTS.system);
     renderReagentEqs(snap.reagentEqs);
     setMode(snap.mode === 'mass' ? 'mass' : 'scale', false, false);
@@ -249,7 +255,13 @@
 
   function updateSequence() {
     const raw = get('sequence').value;
-    const res = C.sequenceMW(raw, { nTerm: get('nTerm').value, cTerm: get('cTerm').value, nFmoc: get('nFmoc').checked });
+    const custom = readCustom().map(c => ({ name: c.name, mass: Number(c.mass), bbMW: Number(c.bbMW) }));
+    const valid = C.customIndex(custom);
+    document.querySelectorAll('#customList .custom-row').forEach((row, i) => {
+      const c = custom[i];
+      row.classList.toggle('bad', !!(c.name.trim() || c.mass || c.bbMW) && !valid[c.name.trim().toLowerCase()]);
+    });
+    const res = C.sequenceMW(raw, { nTerm: get('nTerm').value, cTerm: get('cTerm').value, nFmoc: get('nFmoc').checked, custom });
     lastSeq = Number.isFinite(res.free) ? res : null;
     get('seqLen').textContent = res.residues.length ? res.residues.length + ' ' + t('residuesUnit') : '—';
     get('seqProt').textContent = fmt(res.protected, 'g/mol');
@@ -286,7 +298,7 @@
     const aaEq = readNum('aaEq');
     const couplings = Math.round(readNum('couplings'));
     const reagents = [...document.querySelectorAll('#reagentEqs input')].map(el => [el.dataset.reagent, el.value === '' ? NaN : Number(el.value)]);
-    const nums = ['deprotVol', 'deprots', 'washVol', 'washes'].map(readNum);
+    const nums = ['deprotVol', 'deprots', 'washesCouple', 'washCoupleVol', 'washesDeprot', 'washDeprotVol'].map(readNum);
     const valid = aaEq > 0 && couplings >= 1 && reagents.every(([, eq]) => eq >= 0) && nums.every(x => x >= 0);
     showError('planError', last && !valid ? [t('errPlan')] : []);
     const ids = ['perCouplingTable', 'cycleTable', 'totalsTable'];
@@ -300,7 +312,8 @@
     const plan = C.couplingPlan({
       scale: last.scale, resinMass: last.mass, residues, aaEq, reagents, couplings,
       skipFirst: get('skipFirst').checked,
-      deprotVol: nums[0], deprots: nums[1], washVol: nums[2], washes: nums[3]
+      deprotVol: nums[0], deprots: nums[1],
+      washesCouple: nums[2], washCoupleVol: nums[3], washesDeprot: nums[4], washDeprotVol: nums[5]
     });
     lastPlan = plan;
 
@@ -314,7 +327,7 @@
     get('noSeqHint').hidden = residues.length > 0;
     get('cycleTable').innerHTML = residues.length ? table(
       [{ text: t('thCycle'), num: true }, t('thResidue'), t('thBuildingBlock'), { text: t('thMW'), num: true }, { text: t('thMmol'), num: true }, { text: t('thGrams'), num: true }],
-      plan.cycles.map(c => [n(c.cycle, 0), c.residue + ' (' + C.RESIDUES[c.residue].code + ')', c.name, n(c.mw, 2), n(c.mmol), n(c.grams)]),
+      plan.cycles.map(c => [n(c.cycle, 0), c.residue + ' (' + (c.d ? 'D-' : '') + c.code + ')', c.name, n(c.mw, 2), n(c.mmol), n(c.grams)]),
       [t('sumRow'), '', '', '', '', n(plan.aaTotalGrams)]
     ) : '';
 
@@ -326,9 +339,62 @@
     }
     rows.push([t('totalPip'), { text: vol(plan.piperidineSolution), num: true }]);
     rows.push([t('totalPipNeat'), { text: vol(plan.piperidine), num: true }]);
-    rows.push([t('totalWash'), { text: vol(plan.washDMF), num: true }]);
+    rows.push([t('totalWashCouple'), { text: vol(plan.washCoupleDMF), num: true }]);
+    rows.push([t('totalWashDeprot'), { text: vol(plan.washDeprotDMF), num: true }]);
     rows.push([t('totalDMF'), { text: vol(plan.totalDMF), num: true }]);
     get('totalsTable').innerHTML = table([t('thItem'), { text: t('thAmount'), num: true }], rows);
+  }
+
+  /* ---------- non-natural and custom residues ---------- */
+  function renderNonstdList() {
+    const box = get('nonstdList');
+    box.textContent = '';
+    Object.keys(C.NONSTD).forEach(key => {
+      const code = document.createElement('code');
+      code.textContent = '[' + key + ']';
+      code.title = C.buildingBlock(key).name;
+      box.appendChild(code);
+    });
+  }
+  function readCustom() {
+    return [...document.querySelectorAll('#customList .custom-row')].map(row => ({
+      name: row.querySelector('[data-k=name]').value,
+      mass: row.querySelector('[data-k=mass]').value,
+      bbMW: row.querySelector('[data-k=bbMW]').value
+    }));
+  }
+  function customRow(c) {
+    const row = document.createElement('div');
+    row.className = 'custom-row';
+    [['name', 'customName', 'text'], ['mass', 'customMass', 'number'], ['bbMW', 'customBB', 'number']].forEach(([k, labelKey, type]) => {
+      const field = document.createElement('div');
+      field.className = 'field';
+      const label = document.createElement('label');
+      label.textContent = t(labelKey);
+      const input = document.createElement('input');
+      input.type = type;
+      input.dataset.k = k;
+      input.value = c[k] || '';
+      if (type === 'number') { input.step = 'any'; input.min = '0'; input.inputMode = 'decimal'; }
+      else { input.autocomplete = 'off'; input.spellcheck = false; }
+      input.addEventListener('input', calculate);
+      label.appendChild(input);
+      field.appendChild(label);
+      row.appendChild(field);
+    });
+    const remove = document.createElement('button');
+    remove.type = 'button';
+    remove.className = 'no-print';
+    remove.textContent = '✕';
+    remove.setAttribute('aria-label', t('removeCustom'));
+    remove.addEventListener('click', () => { row.remove(); calculate(); });
+    row.appendChild(remove);
+    return row;
+  }
+  function renderCustom(list) {
+    const box = get('customList');
+    box.textContent = '';
+    list.forEach(c => box.appendChild(customRow(c)));
   }
 
   /* ---------- copy / reset ---------- */
@@ -350,7 +416,7 @@
       t('outFinal') + ': ' + fmt(last.final, 'g')
     ];
     if (lastSeq) {
-      lines.push('', t('sequence') + ': ' + lastSeq.residues.join(''),
+      lines.push('', t('sequence') + ': ' + lastSeq.residues.map(r => r.label).join(''),
         t('seqProt') + ': ' + fmt(lastSeq.protected, 'g/mol'),
         t('seqFree') + ': ' + fmt(lastSeq.free, 'g/mol'));
     }
@@ -375,6 +441,7 @@
   }
   function applyDefaults() {
     Object.keys(DEFAULTS).forEach(id => setField(id, DEFAULTS[id]));
+    renderCustom([]);
     renderReagentEqs(null);
   }
   function reset() {
@@ -386,6 +453,7 @@
   /* ---------- init ---------- */
   renderResinOptions();
   renderSystemOptions();
+  renderNonstdList();
   applyDefaults();
   MB_FIELDS.concat(SEQ_FIELDS, PLAN_FIELDS).forEach(id => get(id).addEventListener('input', calculate));
   ['nTerm', 'cTerm', 'nFmoc', 'skipFirst'].forEach(id => get(id).addEventListener('change', calculate));
@@ -397,6 +465,11 @@
   get('saveProject').addEventListener('click', saveProject);
   get('deleteProject').addEventListener('click', deleteProject);
   get('applySeq').addEventListener('click', applySequenceMW);
+  get('addCustom').addEventListener('click', () => {
+    const row = customRow({});
+    get('customList').appendChild(row);
+    row.querySelector('input').focus();
+  });
   get('reset').addEventListener('click', reset);
   get('print').addEventListener('click', () => window.print());
   get('copy').addEventListener('click', copyResults);
