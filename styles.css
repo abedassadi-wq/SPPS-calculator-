@@ -88,6 +88,11 @@ input[type=number], textarea { direction: ltr; }
 .actions button.danger { color: #a42121; border-color: #e3b4b4; }
 button:disabled { opacity: .45; cursor: not-allowed; }
 
+.steps { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.step { border: 1px solid #dde6f0; background: #f7f9fc; border-radius: 13px; padding: 14px; }
+.step-title { font-size: 13px; font-weight: 800; color: #33445a; margin-bottom: 12px; }
+.step .field + .field { margin-top: 10px; }
+.step .field label { font-size: 12px; }
 .table-wrap { overflow-x: auto; }
 table { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
 th, td { padding: 8px 10px; border-bottom: 1px solid #e6ecf3; text-align: start; white-space: nowrap; }
@@ -102,6 +107,7 @@ tfoot td { font-weight: 800; border-top: 2px solid #cfd9e5; }
   .card { padding: 15px; }
   .grid, .results { gap: 10px; }
   .results.small { grid-template-columns: 1fr 1fr; }
+  .steps { grid-template-columns: 1fr; }
   .custom-row { grid-template-columns: 1fr 1fr; }
   .metric { padding: 12px; }
   .field label { font-size: 12px; }
