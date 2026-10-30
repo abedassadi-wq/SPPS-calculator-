@@ -60,9 +60,9 @@ test('lowercase letters are D-amino acids with the same mass', () => {
 });
 
 test('non-natural residues in brackets', () => {
-  const r = C.parseSequence('H[3Pal]E[d-2Nal][Tyr(2-Boc-ea)][sar][Thpgly][7MeTrp][Pen]');
+  const r = C.parseSequence('H[3Pal]E[d-2Nal][Tyr(2-Boc-ea)][sar][Thp][7MeTrp][Pen][Lys(Ac)]');
   assert.deepEqual(r.invalid, []);
-  assert.deepEqual(r.residues.map(x => x.code), ['His', '3-Pal', 'Glu', '2-Nal', 'Tyr(2-ea)', 'Sar', 'Thpgly', '7-MeTrp', 'Pen']);
+  assert.deepEqual(r.residues.map(x => x.code), ['His', '3-Pal', 'Glu', '2-Nal', 'Tyr(2-ea)', 'Sar', 'Thp', '7-MeTrp', 'Pen', 'Lys(Ac)']);
   assert.equal(r.residues[3].d, true);
   assert.equal(C.buildingBlock(r.residues[3]).name, 'Fmoc-D-2-Nal-OH');
   // Catalogue MWs of the Fmoc building blocks
@@ -70,17 +70,34 @@ test('non-natural residues in brackets', () => {
   close(C.buildingBlock('Sar').mw, 311.33);
   close(C.buildingBlock('3Pal').mw, 388.42);
   close(C.buildingBlock('2Nal').mw, 437.49);
-  close(C.buildingBlock('Thpgly').mw, 381.42);
-  close(C.buildingBlock('7MeTrp').mw, 440.49);
+  close(C.buildingBlock('Thp').mw, 367.40);
+  close(C.buildingBlock('7MeTrp').mw, 440.48);
+  close(C.buildingBlock('Lys(Ac)').mw, 410.46);
   close(C.buildingBlock('Tyr(2-Boc-ea)').mw, 546.61);
-  assert.equal(C.buildingBlock('Tyr(2-Boc-ea)').name, 'Fmoc-Tyr(2-Boc-ea)-OH');
+  assert.equal(C.buildingBlock('Lys(Ac)').name, 'Fmoc-Lys(Ac)-OH');
   assert.equal(C.buildingBlock('Pen').name, 'Fmoc-Pen(Trt)-OH');
+  // Thpgly is kept as an alias of the corrected Thp residue
+  close(C.buildingBlock('Thpgly').mw, 367.40);
   // Only the agreed list is built in
-  assert.deepEqual(Object.keys(C.NONSTD), ['Pen', 'Sar', '3Pal', '2Nal', 'Thpgly', '7MeTrp', 'Tyr(2-Boc-ea)']);
+  assert.deepEqual(Object.keys(C.NONSTD), ['Pen', 'Sar', '3Pal', '2Nal', 'Thp', '7MeTrp', 'Lys(Ac)', 'Tyr(2-Boc-ea)']);
   assert.equal(C.parseSequence('[Aib]').invalid.length, 1);
   // Boc on Tyr(2-ea) counts towards the protected MW only
   const s = C.sequenceMW('[Tyr(2-Boc-ea)]', { cTerm: 'acid' });
   close(s.protected - s.free, C.PG.Boc);
+  // Lys(Ac): the acetyl is permanent, so it is in both free and protected MW
+  const k = C.sequenceMW('[Lys(Ac)]', { cTerm: 'acid' });
+  close(k.protected - k.free, 0, 1e-9);
+});
+
+test('icotrokinra (CAS 2763602-16-8) linear mass', () => {
+  // N-acetyl, C-terminal amide, cyclic (1->6) disulfide between the two Pen residues.
+  const seq = '[Pen]NT[7MeTrp][Lys(Ac)][Pen][Tyr(2-Boc-ea)][2Nal][Thp]EN[3Pal][Sar]';
+  const r = C.sequenceMW(seq, { nTerm: 'Ac', cTerm: 'amide' });
+  assert.equal(r.residues.length, 13);
+  assert.deepEqual(r.invalid, []);
+  const disulfide = r.free - 2 * 1.00794;
+  // Reference average MW of C90H120N20O22S2 is 1898.19
+  close(disulfide, 1898.19, 0.1);
 });
 
 test('custom residues', () => {

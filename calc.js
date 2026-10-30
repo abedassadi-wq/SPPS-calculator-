@@ -9,7 +9,7 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
 
-  const APP_VERSION = '8.2';
+  const APP_VERSION = '8.3';
 
   // Average masses (g/mol)
   const H2O = 18.0153;
@@ -132,8 +132,10 @@
     'Sar':           { code: 'Sar', mass: 71.0779 },
     '3Pal':          { code: '3-Pal', mass: 148.1619, aliases: ['3-Pal', 'Pal'] },                // 3-(3-pyridyl)alanine
     '2Nal':          { code: '2-Nal', mass: 197.2325, aliases: ['2-Nal', 'Nal'] },                // 3-(2-naphthyl)alanine
-    'Thpgly':        { code: 'Thpgly', mass: 141.1677, aliases: ['Thp-Gly', 'ThpGly'] },          // (tetrahydropyran-4-yl)glycine
-    '7MeTrp':        { code: '7-MeTrp', mass: 200.2365, aliases: ['7-MeTrp', '7-Me-Trp'] },       // 7-methyltryptophan, unprotected indole
+    'Thp':           { code: 'Thp', mass: 127.1427, bb: 'Fmoc-Thp-OH',
+                       aliases: ['Thpgly', 'Thp-Gly', 'ThpGly', 'Api'] },                         // 4-amino-tetrahydro-2H-pyran-4-carboxylic acid
+    '7MeTrp':        { code: '7-MeTrp', mass: 200.2256, aliases: ['7-MeTrp', '7-Me-Trp'] },       // 7-methyltryptophan, unprotected indole
+    'Lys(Ac)':       { code: 'Lys(Ac)', mass: 170.2090, bb: 'Fmoc-Lys(Ac)-OH' },                  // N6-acetyl-lysine (acetyl is permanent, not a protecting group)
     'Tyr(2-Boc-ea)': { code: 'Tyr(2-ea)', mass: 206.2411, pg: 'Boc', bb: 'Fmoc-Tyr(2-Boc-ea)-OH',
                        aliases: ['Tyr(ea)', 'Tyr(2-ea)'] }                                         // O-(2-aminoethyl)tyrosine, Boc on the amine
   };
