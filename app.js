@@ -135,6 +135,9 @@
       snap = Object.assign({}, snap, { washesCouple: snap.washes, washesDeprot: snap.washes, washCoupleVol: snap.washVol, washDeprotVol: snap.washVol });
     }
     if (snap.coupleVol === undefined) snap = Object.assign({}, snap, { coupleVol: DEFAULTS.coupleVol });
+    ['coupleVol', 'deprotVol', 'washDeprotVol', 'washCoupleVol'].forEach(id => {
+      if (snap[id] !== undefined && !get(id).querySelector('option[value="' + snap[id] + '"]')) snap[id] = DEFAULTS[id];
+    });
     STATE_FIELDS.forEach(id => { if (snap[id] !== undefined) setField(id, snap[id]); });
     renderCustom(snap.customResidues || []);
     if (!C.COUPLING_SYSTEMS[get('system').value]) setField('system', DEFAULTS.system);
@@ -481,7 +484,7 @@
   renderPads();
   applyDefaults();
   MB_FIELDS.concat(SEQ_FIELDS, PLAN_FIELDS).forEach(id => get(id).addEventListener('input', calculate));
-  ['nTerm', 'cTerm', 'nFmoc', 'skipFirst', 'washesDeprot', 'washesCouple'].forEach(id => get(id).addEventListener('change', calculate));
+  ['nTerm', 'cTerm', 'nFmoc', 'skipFirst', 'washesDeprot', 'washesCouple', 'coupleVol', 'deprotVol', 'washDeprotVol', 'washCoupleVol'].forEach(id => get(id).addEventListener('change', calculate));
   get('resin').addEventListener('change', changeResin);
   get('system').addEventListener('change', changeSystem);
   get('project').addEventListener('change', applyProject);
