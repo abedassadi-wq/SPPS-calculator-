@@ -185,7 +185,11 @@
         <label for="couplings" data-i18n="couplings">Couplings per residue</label>
         <input id="couplings" type="number" inputmode="numeric" min="1" step="1" value="1">
       </div>
-      <label class="check"><input type="checkbox" id="skipFirst"> <span data-i18n="skipFirst">First (C-terminal) residue pre-loaded on resin</span></label>
+      <div class="field">
+        <label for="coupleVol" data-i18n="coupleVol">DMF per coupling (mL/g resin)</label>
+        <input id="coupleVol" type="number" inputmode="decimal" min="0" step="any">
+      </div>
+      <label class="check span2"><input type="checkbox" id="skipFirst"> <span data-i18n="skipFirst">First (C-terminal) residue pre-loaded on resin</span></label>
       <div class="field">
         <label for="deprotVol" data-i18n="deprotVol">20% piperidine/DMF (mL/g resin per treatment)</label>
         <input id="deprotVol" type="number" inputmode="decimal" min="0" step="any" value="10">

@@ -15,11 +15,11 @@
   const DEFAULTS = {
     scale: '100', mass: '125', sequence: '', nTerm: 'H', cTerm: 'amide', nFmoc: false,
     system: 'dic-oxyma', aaEq: '3', couplings: '1', skipFirst: false,
-    deprotVol: '10', deprots: '2', washesCouple: '5', washCoupleVol: '10', washesDeprot: '5', washDeprotVol: '10'
+    coupleVol: '10', deprotVol: '10', deprots: '2', washesCouple: '5', washCoupleVol: '10', washesDeprot: '5', washDeprotVol: '10'
   };
   const MB_FIELDS = ['loading', 'protectedMW', 'freeMW', 'correction', 'yieldPct', 'scale', 'mass'];
   const SEQ_FIELDS = ['sequence', 'nTerm', 'cTerm', 'nFmoc'];
-  const PLAN_FIELDS = ['aaEq', 'couplings', 'skipFirst', 'deprotVol', 'deprots', 'washesCouple', 'washCoupleVol', 'washesDeprot', 'washDeprotVol'];
+  const PLAN_FIELDS = ['aaEq', 'couplings', 'skipFirst', 'coupleVol', 'deprotVol', 'deprots', 'washesCouple', 'washCoupleVol', 'washesDeprot', 'washDeprotVol'];
   const STATE_FIELDS = ['resin'].concat(MB_FIELDS, SEQ_FIELDS, ['system'], PLAN_FIELDS);
 
   let mode = 'scale';
@@ -134,6 +134,7 @@
     if (snap.washes !== undefined && snap.washesCouple === undefined) {
       snap = Object.assign({}, snap, { washesCouple: snap.washes, washesDeprot: snap.washes, washCoupleVol: snap.washVol, washDeprotVol: snap.washVol });
     }
+    if (snap.coupleVol === undefined) snap = Object.assign({}, snap, { coupleVol: DEFAULTS.coupleVol });
     STATE_FIELDS.forEach(id => { if (snap[id] !== undefined) setField(id, snap[id]); });
     renderCustom(snap.customResidues || []);
     if (!C.COUPLING_SYSTEMS[get('system').value]) setField('system', DEFAULTS.system);
@@ -287,7 +288,7 @@
     const aaEq = readNum('aaEq');
     const couplings = Math.round(readNum('couplings'));
     const reagents = [...document.querySelectorAll('#reagentEqs input')].map(el => [el.dataset.reagent, el.value === '' ? NaN : Number(el.value)]);
-    const nums = ['deprotVol', 'deprots', 'washesCouple', 'washCoupleVol', 'washesDeprot', 'washDeprotVol'].map(readNum);
+    const nums = ['coupleVol', 'deprotVol', 'deprots', 'washesCouple', 'washCoupleVol', 'washesDeprot', 'washDeprotVol'].map(readNum);
     const valid = aaEq > 0 && couplings >= 1 && reagents.every(([, eq]) => eq >= 0) && nums.every(x => x >= 0);
     showError('planError', last && !valid ? [t('errPlan')] : []);
     const ids = ['perCouplingTable', 'cycleTable', 'totalsTable'];
@@ -301,8 +302,8 @@
     const plan = C.couplingPlan({
       scale: last.scale, resinMass: last.mass, residues, aaEq, reagents, couplings,
       skipFirst: get('skipFirst').checked,
-      deprotVol: nums[0], deprots: nums[1],
-      washesCouple: nums[2], washCoupleVol: nums[3], washesDeprot: nums[4], washDeprotVol: nums[5]
+      coupleVol: nums[0], deprotVol: nums[1], deprots: nums[2],
+      washesCouple: nums[3], washCoupleVol: nums[4], washesDeprot: nums[5], washDeprotVol: nums[6]
     });
     lastPlan = plan;
 
@@ -328,6 +329,7 @@
     }
     rows.push([t('totalPip'), { text: vol(plan.piperidineSolution), num: true }]);
     rows.push([t('totalPipNeat'), { text: vol(plan.piperidine), num: true }]);
+    rows.push([t('totalCouple'), { text: vol(plan.coupleDMF), num: true }]);
     rows.push([t('totalWashCouple'), { text: vol(plan.washCoupleDMF), num: true }]);
     rows.push([t('totalWashDeprot'), { text: vol(plan.washDeprotDMF), num: true }]);
     rows.push([t('totalDMF'), { text: vol(plan.totalDMF), num: true }]);

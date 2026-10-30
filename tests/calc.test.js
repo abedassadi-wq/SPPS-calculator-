@@ -150,7 +150,7 @@ test('coupling plan runs C → N and totals reagents', () => {
   const plan = C.couplingPlan({
     scale: 1, resinMass: 2, residues: C.parseSequence('AGK').residues, aaEq: 4,
     reagents: [['DIC', 4], ['Oxyma', 4]], couplings: 2,
-    deprotVol: 10, deprots: 2, washCoupleVol: 10, washesCouple: 5, washDeprotVol: 8, washesDeprot: 3
+    coupleVol: 10, deprotVol: 10, deprots: 2, washCoupleVol: 10, washesCouple: 5, washDeprotVol: 8, washesDeprot: 3
   });
   assert.deepEqual(plan.cycles.map(c => c.residue), ['K', 'G', 'A']);
   close(plan.cycles[0].mmol, 8);
@@ -162,6 +162,9 @@ test('coupling plan runs C → N and totals reagents', () => {
   close(plan.washCoupleDMF, 6 * 5 * 10 * 2);
   close(plan.washDeprotDMF, 4 * 3 * 8 * 2);
   close(plan.washDMF, plan.washCoupleDMF + plan.washDeprotDMF);
+  // 6 couplings × 10 mL/g × 2 g of DMF to dissolve the AA and activator
+  close(plan.coupleDMF, 6 * 10 * 2);
+  close(plan.totalDMF, plan.coupleDMF + plan.washDMF + plan.piperidineSolution * 0.8);
 });
 
 test('coupling plan can skip a pre-loaded first residue', () => {
