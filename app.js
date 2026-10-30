@@ -481,7 +481,7 @@
   renderPads();
   applyDefaults();
   MB_FIELDS.concat(SEQ_FIELDS, PLAN_FIELDS).forEach(id => get(id).addEventListener('input', calculate));
-  ['nTerm', 'cTerm', 'nFmoc', 'skipFirst'].forEach(id => get(id).addEventListener('change', calculate));
+  ['nTerm', 'cTerm', 'nFmoc', 'skipFirst', 'washesDeprot', 'washesCouple'].forEach(id => get(id).addEventListener('change', calculate));
   get('resin').addEventListener('change', changeResin);
   get('system').addEventListener('change', changeSystem);
   get('project').addEventListener('change', applyProject);

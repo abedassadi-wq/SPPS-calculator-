@@ -9,7 +9,7 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
 
-  const APP_VERSION = '8.5';
+  const APP_VERSION = '8.6';
 
   // Average masses (g/mol)
   const H2O = 18.0153;
@@ -64,7 +64,7 @@
   const REAGENTS = {
     DIC:      { name: 'DIC', mw: 126.20, density: 0.806 },
     Oxyma:    { name: 'Oxyma Pure', mw: 142.11 },
-    HOBt:     { name: 'HOBt (anhydrous)', mw: 135.12 },
+    HOBt:     { name: 'HOBt monohydrate', mw: 153.14 },
     HATU:     { name: 'HATU', mw: 380.23 },
     HBTU:     { name: 'HBTU', mw: 379.25 },
     HCTU:     { name: 'HCTU', mw: 413.69 },
@@ -76,7 +76,7 @@
 
   const COUPLING_SYSTEMS = {
     'dic-oxyma':   { label: 'DIC / Oxyma', aaEq: 3, reagents: [['DIC', 3], ['Oxyma', 3]] },
-    'dic-hobt':    { label: 'DIC / HOBt', aaEq: 3, reagents: [['DIC', 3], ['HOBt', 3]] },
+    'dic-hobt':    { label: 'DIC / HOBt monohydrate', aaEq: 3, reagents: [['DIC', 3], ['HOBt', 3]] },
     'hatu-dipea':  { label: 'HATU / DIPEA', aaEq: 3, reagents: [['HATU', 2.9], ['DIPEA', 6]] },
     'hbtu-dipea':  { label: 'HBTU / DIPEA', aaEq: 3, reagents: [['HBTU', 2.9], ['DIPEA', 6]] },
     'hctu-dipea':  { label: 'HCTU / DIPEA', aaEq: 3, reagents: [['HCTU', 2.9], ['DIPEA', 6]] },
