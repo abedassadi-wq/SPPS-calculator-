@@ -181,38 +181,54 @@
         <input id="aaEq" type="number" inputmode="decimal" min="0" step="any">
       </div>
       <div id="reagentEqs" class="span2 grid"></div>
-      <div class="field">
-        <label for="couplings" data-i18n="couplings">Couplings per residue</label>
-        <input id="couplings" type="number" inputmode="numeric" min="1" step="1" value="1">
-      </div>
-      <div class="field">
-        <label for="coupleVol" data-i18n="coupleVol">DMF per coupling (mL/g resin)</label>
-        <input id="coupleVol" type="number" inputmode="decimal" min="0" step="any">
-      </div>
       <label class="check span2"><input type="checkbox" id="skipFirst"> <span data-i18n="skipFirst">First (C-terminal) residue pre-loaded on resin</span></label>
-      <div class="field">
-        <label for="deprotVol" data-i18n="deprotVol">20% piperidine/DMF (mL/g resin per treatment)</label>
-        <input id="deprotVol" type="number" inputmode="decimal" min="0" step="any" value="10">
+    </div>
+
+    <h3 data-i18n="stepsTitle">Volumes and washes per step</h3>
+    <div class="steps">
+      <div class="step">
+        <div class="step-title" data-i18n="stepCouple">Coupling</div>
+        <div class="field">
+          <label for="couplings" data-i18n="couplings">Couplings per residue</label>
+          <input id="couplings" type="number" inputmode="numeric" min="1" step="1" value="1">
+        </div>
+        <div class="field">
+          <label for="coupleVol" data-i18n="mlPerG">DMF (mL/g resin)</label>
+          <input id="coupleVol" type="number" inputmode="decimal" min="0" step="any">
+        </div>
       </div>
-      <div class="field">
-        <label for="deprots" data-i18n="deprots">Deprotection treatments per cycle</label>
-        <input id="deprots" type="number" inputmode="numeric" min="0" step="1" value="2">
+      <div class="step">
+        <div class="step-title" data-i18n="stepDeprot">Fmoc removal (piperidine)</div>
+        <div class="field">
+          <label for="deprots" data-i18n="deprots">Treatments per cycle</label>
+          <input id="deprots" type="number" inputmode="numeric" min="0" step="1" value="2">
+        </div>
+        <div class="field">
+          <label for="deprotVol" data-i18n="mlPerGPip">20% piperidine/DMF (mL/g resin)</label>
+          <input id="deprotVol" type="number" inputmode="decimal" min="0" step="any" value="10">
+        </div>
       </div>
-      <div class="field">
-        <label for="washesCouple" data-i18n="washesCouple">Washes after each coupling</label>
-        <input id="washesCouple" type="number" inputmode="numeric" min="0" step="1">
+      <div class="step">
+        <div class="step-title" data-i18n="stepWashDeprot">Washes after Fmoc removal</div>
+        <div class="field">
+          <label for="washesDeprot" data-i18n="washCount">Number of washes</label>
+          <input id="washesDeprot" type="number" inputmode="numeric" min="0" step="1">
+        </div>
+        <div class="field">
+          <label for="washDeprotVol" data-i18n="mlPerG">DMF (mL/g resin)</label>
+          <input id="washDeprotVol" type="number" inputmode="decimal" min="0" step="any">
+        </div>
       </div>
-      <div class="field">
-        <label for="washCoupleVol" data-i18n="washCoupleVol">DMF per coupling wash (mL/g resin)</label>
-        <input id="washCoupleVol" type="number" inputmode="decimal" min="0" step="any">
-      </div>
-      <div class="field">
-        <label for="washesDeprot" data-i18n="washesDeprot">Washes after each Fmoc removal</label>
-        <input id="washesDeprot" type="number" inputmode="numeric" min="0" step="1">
-      </div>
-      <div class="field">
-        <label for="washDeprotVol" data-i18n="washDeprotVol">DMF per deprotection wash (mL/g resin)</label>
-        <input id="washDeprotVol" type="number" inputmode="decimal" min="0" step="any">
+      <div class="step">
+        <div class="step-title" data-i18n="stepWashCouple">Washes after coupling</div>
+        <div class="field">
+          <label for="washesCouple" data-i18n="washCount">Number of washes</label>
+          <input id="washesCouple" type="number" inputmode="numeric" min="0" step="1">
+        </div>
+        <div class="field">
+          <label for="washCoupleVol" data-i18n="mlPerG">DMF (mL/g resin)</label>
+          <input id="washCoupleVol" type="number" inputmode="decimal" min="0" step="any">
+        </div>
       </div>
     </div>
     <div id="planError" class="error" role="alert" hidden></div>
