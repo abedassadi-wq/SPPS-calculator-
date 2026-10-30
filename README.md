@@ -1,6 +1,6 @@
 # SPPS Resin Calculator
 
-Offline web app (PWA) for solid-phase peptide synthesis planning. No account, no server: everything runs in the browser and works offline once loaded. English and Hebrew UI.
+Offline web app (PWA) for solid-phase peptide synthesis planning. No account, no server: everything runs in the browser and works offline once loaded.
 
 ## What it calculates
 
@@ -60,7 +60,7 @@ Three-letter codes of the standard residues also work in brackets, e.g. `[Ala]`.
 ## Development
 
 - `calc.js`: all calculations (no DOM), shared by the page, the service worker and the tests.
-- `i18n.js`: English and Hebrew strings.
+- `i18n.js`: UI strings.
 - `app.js`, `index.html`, `styles.css`: UI.
 - `service-worker.js`: offline cache, named after `APP_VERSION` in `calc.js`. **Bump `APP_VERSION` on every release** so installed apps pick up the new files.
 

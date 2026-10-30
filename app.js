@@ -7,7 +7,6 @@
 
   const STORE_STATE = 'spps.state.v1';
   const STORE_PROJECTS = 'spps.projects.v1';
-  const STORE_LANG = 'spps.lang';
 
   const BUILTIN_PROJECTS = {
     icr: { labelKey: 'projIcr', infoKey: 'infoIcr', values: { resin: 'rink-am', loading: '0.80', protectedMW: '3080', freeMW: '1898', yieldPct: '44', correction: '-222' } },
@@ -23,7 +22,6 @@
   const PLAN_FIELDS = ['aaEq', 'couplings', 'skipFirst', 'deprotVol', 'deprots', 'washesCouple', 'washCoupleVol', 'washesDeprot', 'washDeprotVol'];
   const STATE_FIELDS = ['resin'].concat(MB_FIELDS, SEQ_FIELDS, ['system'], PLAN_FIELDS);
 
-  let lang = 'en';
   let mode = 'scale';
   let last = null;      // last mass-balance result
   let lastSeq = null;   // last sequence MW result
@@ -38,25 +36,16 @@
   }
   function savedProjects() { return load(STORE_PROJECTS, {}); }
 
-  /* ---------- i18n ---------- */
+  /* ---------- strings ---------- */
   function t(key, vars) {
-    let s = (I18N[lang] && I18N[lang][key]) || I18N.en[key] || key;
+    let s = I18N.en[key] || key;
     if (vars) Object.keys(vars).forEach(k => { s = s.split('{' + k + '}').join(vars[k]); });
     return s;
   }
-  function setLang(next) {
-    lang = I18N[next] ? next : 'en';
-    document.documentElement.lang = lang;
-    document.documentElement.dir = lang === 'he' ? 'rtl' : 'ltr';
+  function initText() {
     document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
-    get('lang').textContent = t('langToggle');
     document.title = t('title');
     get('version').textContent = t('version', { v: C.APP_VERSION });
-    store(STORE_LANG, lang);
-    renderProjectOptions(get('project').value);
-    renderSystemOptions();
-    renderReagentEqs(currentReagentEqs());
-    renderCustom(readCustom());
     updateProjectInfo();
     updateCorrectionInfo();
     calculate();
@@ -510,7 +499,6 @@
   get('reset').addEventListener('click', reset);
   get('print').addEventListener('click', () => window.print());
   get('copy').addEventListener('click', copyResults);
-  get('lang').addEventListener('click', () => setLang(lang === 'he' ? 'en' : 'he'));
 
   const saved = load(STORE_STATE, null);
   renderProjectOptions(saved && saved.project);
@@ -521,6 +509,5 @@
     const values = BUILTIN_PROJECTS.icr.values;
     Object.keys(values).forEach(id => setField(id, values[id]));
   }
-  const storedLang = load(STORE_LANG, null);
-  setLang(storedLang || ((navigator.language || '').toLowerCase().startsWith('he') ? 'he' : 'en'));
+  initText();
 })();

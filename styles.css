@@ -11,10 +11,6 @@ body { margin: 0; background: #f2f5f9; }
 .kicker { font-size: 12px; font-weight: 800; letter-spacing: .12em; color: #58708b; }
 h1 { font-size: clamp(25px, 5vw, 34px); margin: 6px 0; }
 .subtitle { color: #62738a; margin: 0 0 22px; line-height: 1.5; }
-.lang {
-  border: 1px solid #bfccda; background: #fff; border-radius: 999px;
-  padding: 8px 14px; font: inherit; font-size: 13px; font-weight: 750; cursor: pointer; color: #182235;
-}
 
 .card {
   background: #fff; border: 1px solid #dde5ef; border-radius: 18px;
