@@ -49,8 +49,9 @@ Built-in non-natural residues (bracket name → building block):
 | `[Sar]` | Fmoc-Sar-OH | 311.33 |
 | `[3Pal]` | Fmoc-3-Pal-OH (3-pyridylalanine) | 388.42 |
 | `[2Nal]` | Fmoc-2-Nal-OH (2-naphthylalanine) | 437.49 |
-| `[Thpgly]` | Fmoc-Thpgly-OH (tetrahydropyran-4-yl glycine) | 381.42 |
-| `[7MeTrp]` | Fmoc-7-MeTrp-OH (7-methyltryptophan) | 440.49 |
+| `[Thp]` | Fmoc-Thp-OH (4-amino-THP-4-carboxylic acid) | 367.40 |
+| `[7MeTrp]` | Fmoc-7-MeTrp-OH (7-methyltryptophan) | 440.48 |
+| `[Lys(Ac)]` | Fmoc-Lys(Ac)-OH (N6-acetyl-lysine) | 410.46 |
 | `[Tyr(2-Boc-ea)]` | Fmoc-Tyr(2-Boc-ea)-OH (O-(2-Boc-aminoethyl)tyrosine) | 546.61 |
 
 Three-letter codes of the standard residues also work in brackets, e.g. `[Ala]`.
