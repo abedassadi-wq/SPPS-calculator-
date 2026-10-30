@@ -1,6 +1,6 @@
 # SPPS Resin Calculator
 
-Offline web app (PWA) for solid-phase peptide synthesis planning. No account, no server: everything runs in the browser and works offline once loaded. English and Hebrew UI.
+Offline web app (PWA) for solid-phase peptide synthesis planning. No account, no server: everything runs in the browser and works offline once loaded.
 
 ## What it calculates
 
@@ -38,16 +38,29 @@ Average residue masses. Side-chain protection: Ser/Thr/Tyr(tBu), Asp/Glu(OtBu), 
 
 - One-letter codes, N → C. Spaces, digits, dashes and dots are ignored.
 - **Lowercase letter = D-amino acid** (same mass; the building block becomes Fmoc-D-…-OH).
-- **Non-natural residues in square brackets**, case-insensitive, optional `D-` prefix: `H[Aib]EG[Lys(Mtt)][D-Nal]`.
+- **Non-natural residues in square brackets**, case-insensitive, optional `D-` prefix: `H[3Pal]E[Tyr(2-Boc-ea)][D-2Nal]G`.
+- Or tap the residue buttons under the sequence box (standard residues by three-letter code, non-natural residues by building block). The "D-isomer" switch inserts the D form.
 
-Built-in non-natural residues (building block in parentheses): Aib, Abu, Nle, Tle, Ahx, bAla (β-Ala), Sar, Orn(Boc), Dab(Boc), Dap(Boc), Cha, 1Nal, 2Nal, Phg, Hyp(tBu), Cit, Pen(Trt), Lys(Mtt), Lys(ivDde), Lys(Alloc). Three-letter codes of the standard residues also work in brackets, e.g. `[Ala]`.
+Built-in non-natural residues (bracket name → building block):
+
+| Name | Building block | MW |
+|---|---|---|
+| `[Pen]` | Fmoc-Pen(Trt)-OH | 613.76 |
+| `[Sar]` | Fmoc-Sar-OH | 311.33 |
+| `[3Pal]` | Fmoc-3-Pal-OH (3-pyridylalanine) | 388.42 |
+| `[2Nal]` | Fmoc-2-Nal-OH (2-naphthylalanine) | 437.49 |
+| `[Thpgly]` | Fmoc-Thpgly-OH (tetrahydropyran-4-yl glycine) | 381.42 |
+| `[7MeTrp]` | Fmoc-7-MeTrp-OH (7-methyltryptophan) | 440.49 |
+| `[Tyr(2-Boc-ea)]` | Fmoc-Tyr(2-Boc-ea)-OH (O-(2-Boc-aminoethyl)tyrosine) | 546.61 |
+
+Three-letter codes of the standard residues also work in brackets, e.g. `[Ala]`.
 
 **Custom residues**: enter a name, the in-chain residue mass (unprotected) and the MW of the Fmoc building block as purchased. The side-chain protection mass is the difference `building block − residue − H₂O − Fmoc`, so the protected MW and the coupling table both follow from those two numbers.
 
 ## Development
 
 - `calc.js`: all calculations (no DOM), shared by the page, the service worker and the tests.
-- `i18n.js`: English and Hebrew strings.
+- `i18n.js`: UI strings.
 - `app.js`, `index.html`, `styles.css`: UI.
 - `service-worker.js`: offline cache, named after `APP_VERSION` in `calc.js`. **Bump `APP_VERSION` on every release** so installed apps pick up the new files.
 

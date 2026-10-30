@@ -21,7 +21,6 @@
       <div class="kicker" data-i18n="kicker">PEPTIDE PROCESS ENGINEERING</div>
       <h1 data-i18n="title">SPPS Resin Calculator</h1>
     </div>
-    <button type="button" id="lang" class="lang no-print" aria-label="Switch language">עברית</button>
   </header>
   <p class="subtitle" data-i18n="subtitle">Project presets · Resin selection · Bidirectional synthesis scale · Theoretical peptide–resin · Final peptide yield · Coupling reagents</p>
 
@@ -75,7 +74,18 @@
       <div class="grid">
         <div class="field span2">
           <label for="sequence" data-i18n="sequence">Sequence (one-letter code, N → C)</label>
-          <textarea id="sequence" rows="2" spellcheck="false" autocomplete="off" placeholder="e.g. H[Aib]EGTFTSDVSSYLEGQAAKEFIAWLVKGRG"></textarea>
+          <textarea id="sequence" rows="2" spellcheck="false" autocomplete="off" placeholder="e.g. H[3Pal]EGTFTSDVSSYLEGQAAKEFIAWLVKGRG"></textarea>
+        </div>
+        <div class="span2 no-print">
+          <div class="pad-title" data-i18n="padStandard">Tap to add (inserted at the cursor)</div>
+          <div class="aa-pad" id="aaPad"></div>
+          <div class="pad-title" data-i18n="nonstdTitle">Non-natural amino acids</div>
+          <div class="aa-pad" id="nonstdPad"></div>
+          <div class="aa-pad pad-tools">
+            <label class="check"><input type="checkbox" id="padD"> <span data-i18n="padD">D-isomer</span></label>
+            <button type="button" id="padBack" data-i18n="padBack">⌫ Delete last</button>
+            <button type="button" id="padClear" data-i18n="padClear">Clear</button>
+          </div>
         </div>
         <div class="field">
           <label for="nTerm" data-i18n="nTerm">N-terminus</label>
@@ -101,11 +111,8 @@
       <div id="seqError" class="error" role="alert" hidden></div>
       <p class="hint" data-i18n="seqHint">Average masses. Side-chain protection: Ser/Thr/Tyr(tBu), Asp/Glu(OtBu), Lys/Trp(Boc), Asn/Gln/His/Cys(Trt), Arg(Pbf). The sequence is also used for the per-residue coupling table below.</p>
 
-      <h3 data-i18n="nonstdTitle">Non-natural amino acids</h3>
-      <p class="hint" data-i18n="nonstdHint">Write non-natural residues in square brackets. A lowercase letter or a D- prefix inside the brackets means the D-isomer. Example:</p>
-      <div class="chips"><code>H[Aib]Ea[Lys(Mtt)][D-Nal]G</code></div>
-      <p class="hint" data-i18n="nonstdBuiltIn">Built in:</p>
-      <div class="chips" id="nonstdList"></div>
+      <p class="hint" data-i18n="nonstdHint">Typing works too: one-letter codes, non-natural residues in square brackets. A lowercase letter or a D- prefix inside the brackets means the D-isomer. Example:</p>
+      <div class="chips"><code>H[3Pal]Ea[Tyr(2-Boc-ea)][D-2Nal]G</code></div>
       <h3 data-i18n="customTitle">Custom residues</h3>
       <p class="hint" data-i18n="customHint">For anything not in the list. Enter the in-chain residue mass (unprotected) and the MW of the Fmoc building block exactly as you buy it; side-chain protection is taken from the difference. Use the name in brackets in the sequence.</p>
       <div id="customList" class="custom-list"></div>

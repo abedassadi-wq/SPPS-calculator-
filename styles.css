@@ -11,10 +11,6 @@ body { margin: 0; background: #f2f5f9; }
 .kicker { font-size: 12px; font-weight: 800; letter-spacing: .12em; color: #58708b; }
 h1 { font-size: clamp(25px, 5vw, 34px); margin: 6px 0; }
 .subtitle { color: #62738a; margin: 0 0 22px; line-height: 1.5; }
-.lang {
-  border: 1px solid #bfccda; background: #fff; border-radius: 999px;
-  padding: 8px 14px; font: inherit; font-size: 13px; font-weight: 750; cursor: pointer; color: #182235;
-}
 
 .card {
   background: #fff; border: 1px solid #dde5ef; border-radius: 18px;
@@ -37,6 +33,17 @@ input[type=number], textarea { direction: ltr; }
 .check input { width: 18px; height: 18px; }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; direction: ltr; }
 .chips code { font-size: 12px; background: #eef2f7; border-radius: 6px; padding: 4px 7px; color: #33445a; }
+.pad-title { font-size: 12px; font-weight: 750; color: #526277; margin: 4px 0 7px; }
+.aa-pad { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; direction: ltr; }
+.aa-pad button {
+  border: 1px solid #bfccda; background: #fff; border-radius: 9px; padding: 8px 0; min-width: 52px;
+  font: inherit; font-size: 13px; font-weight: 700; color: #182235; cursor: pointer; touch-action: manipulation;
+}
+.aa-pad button:active { background: #182235; color: #fff; }
+#nonstdPad button { padding: 8px 10px; background: #f3f7ff; border-color: #aac0e3; }
+.pad-tools { align-items: center; }
+.pad-tools .check { padding: 0; margin-inline-end: auto; }
+.pad-tools button { padding: 8px 12px; }
 .custom-list { display: grid; gap: 10px; }
 .custom-row { display: grid; grid-template-columns: 1.2fr 1fr 1fr auto; gap: 8px; align-items: end; }
 .custom-row .field input { padding: 10px; }

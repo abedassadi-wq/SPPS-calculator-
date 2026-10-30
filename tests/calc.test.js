@@ -60,26 +60,27 @@ test('lowercase letters are D-amino acids with the same mass', () => {
 });
 
 test('non-natural residues in brackets', () => {
-  const r = C.parseSequence('H[Aib]E[d-Nal][Lys(Mtt)][orn]');
+  const r = C.parseSequence('H[3Pal]E[d-2Nal][Tyr(2-Boc-ea)][sar][Thpgly][7MeTrp][Pen]');
   assert.deepEqual(r.invalid, []);
-  assert.deepEqual(r.residues.map(x => x.code), ['His', 'Aib', 'Glu', '2-Nal', 'Lys', 'Orn']);
+  assert.deepEqual(r.residues.map(x => x.code), ['His', '3-Pal', 'Glu', '2-Nal', 'Tyr(2-ea)', 'Sar', 'Thpgly', '7-MeTrp', 'Pen']);
   assert.equal(r.residues[3].d, true);
+  assert.equal(C.buildingBlock(r.residues[3]).name, 'Fmoc-D-2-Nal-OH');
   // Catalogue MWs of the Fmoc building blocks
-  close(C.buildingBlock('Aib').mw, 325.36);
-  close(C.buildingBlock('Orn').mw, 454.52);
-  close(C.buildingBlock('Dab').mw, 440.49);
-  close(C.buildingBlock('Cha').mw, 393.48);
-  close(C.buildingBlock('Nal').mw, 437.49);
-  close(C.buildingBlock('Hyp').mw, 409.48);
-  close(C.buildingBlock('Lys(Mtt)').mw, 624.77);
-  close(C.buildingBlock('Lys(ivDde)').mw, 574.71);
-  close(C.buildingBlock('Lys(Alloc)').mw, 452.50);
-  assert.equal(C.buildingBlock('Lys(Mtt)').name, 'Fmoc-Lys(Mtt)-OH');
-  // Aib adds 85.10 to the chain, with no side-chain protection
-  const base = C.sequenceMW('HG');
-  const aib = C.sequenceMW('H[Aib]G');
-  close(aib.free - base.free, 85.10);
-  close(aib.protected - aib.free, base.protected - base.free);
+  close(C.buildingBlock('Pen').mw, 613.77, 0.02);
+  close(C.buildingBlock('Sar').mw, 311.33);
+  close(C.buildingBlock('3Pal').mw, 388.42);
+  close(C.buildingBlock('2Nal').mw, 437.49);
+  close(C.buildingBlock('Thpgly').mw, 381.42);
+  close(C.buildingBlock('7MeTrp').mw, 440.49);
+  close(C.buildingBlock('Tyr(2-Boc-ea)').mw, 546.61);
+  assert.equal(C.buildingBlock('Tyr(2-Boc-ea)').name, 'Fmoc-Tyr(2-Boc-ea)-OH');
+  assert.equal(C.buildingBlock('Pen').name, 'Fmoc-Pen(Trt)-OH');
+  // Only the agreed list is built in
+  assert.deepEqual(Object.keys(C.NONSTD), ['Pen', 'Sar', '3Pal', '2Nal', 'Thpgly', '7MeTrp', 'Tyr(2-Boc-ea)']);
+  assert.equal(C.parseSequence('[Aib]').invalid.length, 1);
+  // Boc on Tyr(2-ea) counts towards the protected MW only
+  const s = C.sequenceMW('[Tyr(2-Boc-ea)]', { cTerm: 'acid' });
+  close(s.protected - s.free, C.PG.Boc);
 });
 
 test('custom residues', () => {
