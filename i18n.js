@@ -170,6 +170,13 @@
       peptideCocktailVolume: 'Peptide–cocktail volume',
       antisolventVolume: 'Antisolvent volume',
       precipitationVolume: 'Precipitation volume (total)',
+      s7: '7. Materials summary',
+      summaryHint: 'Everything used across the whole process. Amounts above 1000 mL or 1000 g are shown in L or kg (2 decimals).',
+      summaryEmpty: 'Enter a sequence or a residue count in section 5 to include the amino acids and reagents.',
+      thMaterial: 'Material',
+      thTotalUsed: 'Total used',
+      matDMF: 'DMF (total)',
+      matPiperidine: 'Piperidine (neat)',
       version: 'Version {v} · Works offline · No account required',
       copyHeader: 'SPPS Resin Calculator v{v}'
     }
