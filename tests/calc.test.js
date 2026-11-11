@@ -149,22 +149,40 @@ test('reagent amounts include volume for liquids', () => {
 test('coupling plan runs C → N and totals reagents', () => {
   const plan = C.couplingPlan({
     scale: 1, resinMass: 2, residues: C.parseSequence('AGK').residues, aaEq: 4,
-    reagents: [['DIC', 4], ['Oxyma', 4]], couplings: 2,
-    coupleVol: 10, deprotVol: 10, deprots: 2, washCoupleVol: 10, washesCouple: 5, washDeprotVol: 8, washesDeprot: 3
+    reagents: [['DIC', 4], ['Oxyma', 4]],
+    swellVol: 6, swellTimes: 3, coupleVol: 10, deprotVol: 10, deprots: 2,
+    washCoupleVol: 10, washesCouple: 5, washDeprotVol: 8, washesDeprot: 3
   });
   assert.deepEqual(plan.cycles.map(c => c.residue), ['K', 'G', 'A']);
-  close(plan.cycles[0].mmol, 8);
-  close(plan.reagentTotals[0].mmol, 4 * 3 * 2);
-  // 3 cycles + initial deprotection, 2 treatments × 10 mL/g × 2 g
+  assert.equal(plan.couplings, 3);          // one coupling per residue
+  assert.equal(plan.deprotCycles, 4);       // + initial Fmoc removal
+  close(plan.cycles[0].mmol, 4);            // scale × aaEq, no couplings multiplier
+  close(plan.reagentTotals[0].mmol, 4 * 3); // per coupling × 3 couplings
+  // 4 deprotections, 2 treatments × 10 mL/g × 2 g
   close(plan.piperidineSolution, 4 * 2 * 10 * 2);
   close(plan.piperidine, plan.piperidineSolution * 0.2);
-  // 6 couplings × 5 washes × 10 mL/g × 2 g, and 4 deprotections × 3 washes × 8 mL/g × 2 g
-  close(plan.washCoupleDMF, 6 * 5 * 10 * 2);
+  // 3 couplings × 5 washes × 10 mL/g × 2 g, and 4 deprotections × 3 washes × 8 mL/g × 2 g
+  close(plan.washCoupleDMF, 3 * 5 * 10 * 2);
   close(plan.washDeprotDMF, 4 * 3 * 8 * 2);
   close(plan.washDMF, plan.washCoupleDMF + plan.washDeprotDMF);
-  // 6 couplings × 10 mL/g × 2 g of DMF to dissolve the AA and activator
-  close(plan.coupleDMF, 6 * 10 * 2);
-  close(plan.totalDMF, plan.coupleDMF + plan.washDMF + plan.piperidineSolution * 0.8);
+  // resin swelling: 3 swells × 6 mL/g × 2 g
+  close(plan.swellDMF, 3 * 6 * 2);
+  // 3 couplings × 10 mL/g × 2 g of DMF to dissolve the AA and activator
+  close(plan.coupleDMF, 3 * 10 * 2);
+  close(plan.totalDMF, plan.swellDMF + plan.coupleDMF + plan.washDMF + plan.piperidineSolution * 0.8);
+});
+
+test('coupling plan can use a manual residue count with no sequence', () => {
+  const plan = C.couplingPlan({
+    scale: 1, resinMass: 2, residues: [], residueCount: 10, aaEq: 3,
+    reagents: [['DIC', 3], ['HOBt', 3]], swellVol: 6, swellTimes: 3
+  });
+  assert.equal(plan.nRes, 10);
+  assert.equal(plan.couplings, 10);
+  assert.equal(plan.deprotCycles, 11);
+  assert.deepEqual(plan.aaTotals, []);           // no per-AA breakdown without a sequence
+  close(plan.reagentTotals[0].grams, C.reagentAmount('DIC', 3, 1).grams * 10);
+  close(plan.swellDMF, 3 * 6 * 2);
 });
 
 test('coupling plan totals each amino acid', () => {
@@ -173,7 +191,7 @@ test('coupling plan totals each amino acid', () => {
   const gly = plan.aaTotals.find(a => a.name === 'Fmoc-Gly-OH');
   assert.equal(ala.count, 2);
   assert.equal(gly.count, 2);
-  close(ala.mmol, 2 * 3);
+  close(ala.mmol, 2 * 3);            // 2 Ala cycles × scale 1 × 3 eq
   close(ala.grams, 2 * C.buildingBlock('A').mw * 3 / 1000);
   // sorted and summing to the lump total
   assert.deepEqual(plan.aaTotals.map(a => a.name), ['Fmoc-Ala-OH', 'Fmoc-Gly-OH', 'Fmoc-Lys(Boc)-OH']);

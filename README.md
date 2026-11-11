@@ -6,7 +6,7 @@ Offline web app (PWA) for solid-phase peptide synthesis planning. No account, no
 
 1. **Mass balance**: synthesis scale ↔ initial dry resin, theoretical peptide–resin mass, peptide–resin loading, theoretical and expected final unprotected peptide.
 2. **Peptide MW from sequence** (optional): protected (Fmoc/tBu) and unprotected MW from the one-letter sequence, with N-terminal (H / Ac) and C-terminal (amide / acid) options.
-3. **Coupling plan**: Fmoc-AA, coupling reagent and base amounts per coupling and per residue, plus a per-amino-acid total (grams and mmol of each distinct Fmoc building block), the coupling reagents, and piperidine and DMF totals for the whole campaign. The DMF the coupling is run in, the washes after coupling and the washes after Fmoc removal each have their own volume setting (mL/g resin).
+3. **Coupling plan**: driven by the number of residues (filled from the sequence by the "Use these MW values" button, or typed manually). Gives Fmoc-AA and reagent amounts per coupling, a per-amino-acid total (grams of each distinct Fmoc building block, when a sequence is given), the coupling reagents, and DMF totals for the whole campaign — resin swelling, couplings, both wash steps and piperidine. Each step's volume is mL/g resin (default 6); there is always an initial Fmoc removal (e.g. Rink amide).
 
 Projects can be saved in the browser (localStorage). The last inputs are restored automatically. Results can be copied or printed to PDF.
 

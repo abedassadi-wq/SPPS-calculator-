@@ -9,7 +9,7 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
 
-  const APP_VERSION = '8.8';
+  const APP_VERSION = '8.9';
 
   // Average masses (g/mol)
   const H2O = 18.0153;
@@ -247,35 +247,32 @@
 
   /* Full coupling plan. Couplings run C→N, so cycle 1 is the C-terminal residue.
    * opts: { scale, resinMass, residues (parsed), aaEq, reagents: [[id, eq]...], couplings (per residue),
-   *         skipFirst (first residue pre-loaded on resin), coupleVol (DMF per coupling), deprotVol, deprots,
+   *         skipFirst (first residue pre-loaded on resin), residueCount (overrides residues.length for the DMF/reagent math),
+   *         swellVol, swellTimes (initial resin swelling), coupleVol, deprotVol, deprots,
    *         washCoupleVol, washesCouple (after every coupling), washDeprotVol, washesDeprot (after every deprotection) } */
   function couplingPlan(opts) {
     const o = Object.assign({
-      aaEq: 3, couplings: 1, skipFirst: false, coupleVol: 10, deprotVol: 10, deprots: 2,
-      washCoupleVol: 10, washesCouple: 5, washDeprotVol: 10, washesDeprot: 5
+      aaEq: 3, skipFirst: false, residueCount: null,
+      swellVol: 6, swellTimes: 3, coupleVol: 6, deprotVol: 6, deprots: 2,
+      washCoupleVol: 6, washesCouple: 5, washDeprotVol: 6, washesDeprot: 5
     }, opts);
-    const order = o.residues.slice().reverse();
+    const residues = o.residues || [];
+    // Number of residues drives the chemistry: from the explicit count, else the sequence length.
+    const nRes = Number.isFinite(o.residueCount) && o.residueCount > 0 ? Math.round(o.residueCount) : residues.length;
+    // One coupling per residue, minus a pre-loaded first residue.
+    const couplings = Math.max(0, nRes - (o.skipFirst ? 1 : 0));
+    // Each coupling is followed by an Fmoc removal, plus the initial Fmoc removal (always, e.g. Rink amide).
+    const deprotCycles = couplings + 1;
+
+    // Per-cycle / per-amino-acid breakdown comes from the typed sequence, when there is one.
+    const order = residues.slice().reverse();
     const cycles = [];
     order.forEach((r, i) => {
       if (o.skipFirst && i === 0) return;
       const bb = buildingBlock(r);
-      const mmol = o.scale * o.aaEq * o.couplings;
+      const mmol = o.scale * o.aaEq;
       cycles.push({ cycle: cycles.length + 1, residue: r.label, code: r.code, d: r.d, name: bb.name, mw: bb.mw, mmol, grams: mmol * bb.mw / 1000 });
     });
-    const n = cycles.length;
-    const perCoupling = o.reagents.map(([id, eq]) => reagentAmount(id, eq, o.scale));
-    const reagentTotals = perCoupling.map(r => Object.assign({}, r, {
-      mmol: r.mmol * n * o.couplings, grams: r.grams * n * o.couplings, mL: r.mL * n * o.couplings
-    }));
-    // Deprotections = one per coupling cycle, plus the initial Fmoc removal of the resin/first residue.
-    const deprotCycles = n + 1;
-    const piperidineSolution = o.resinMass * o.deprotVol * o.deprots * deprotCycles; // mL of 20% piperidine/DMF
-    // DMF the Fmoc-AA and activator are dissolved in, one volume per coupling.
-    const coupleDMF = o.resinMass * o.coupleVol * n * o.couplings;
-    const washCoupleDMF = o.resinMass * o.washCoupleVol * o.washesCouple * n * o.couplings;
-    const washDeprotDMF = o.resinMass * o.washDeprotVol * o.washesDeprot * deprotCycles;
-    const washDMF = washCoupleDMF + washDeprotDMF;
-    // Per amino acid: total of each distinct Fmoc building block across the whole synthesis.
     const aaMap = {};
     cycles.forEach(c => {
       if (!aaMap[c.name]) aaMap[c.name] = { name: c.name, code: c.code, d: c.d, mw: c.mw, count: 0, mmol: 0, grams: 0 };
@@ -284,7 +281,21 @@
       aaMap[c.name].grams += c.grams;
     });
     const aaTotals = Object.keys(aaMap).map(k => aaMap[k]).sort((a, b) => a.name.localeCompare(b.name));
+
+    const perCoupling = o.reagents.map(([id, eq]) => reagentAmount(id, eq, o.scale));
+    const reagentTotals = perCoupling.map(r => Object.assign({}, r, {
+      mmol: r.mmol * couplings, grams: r.grams * couplings, mL: r.mL * couplings
+    }));
+
+    const piperidineSolution = o.resinMass * o.deprotVol * o.deprots * deprotCycles; // mL of 20% piperidine/DMF
+    const swellDMF = o.resinMass * o.swellVol * o.swellTimes;              // initial resin swelling
+    const coupleDMF = o.resinMass * o.coupleVol * couplings;               // DMF the Fmoc-AA + activator are dissolved in
+    const washCoupleDMF = o.resinMass * o.washCoupleVol * o.washesCouple * couplings;
+    const washDeprotDMF = o.resinMass * o.washDeprotVol * o.washesDeprot * deprotCycles;
+    const washDMF = washCoupleDMF + washDeprotDMF;
     return {
+      nRes,
+      couplings,
       cycles,
       perCoupling,
       reagentTotals,
@@ -293,13 +304,15 @@
       deprotCycles,
       piperidineSolution,
       piperidine: piperidineSolution * 0.2,
+      swellDMF,
       coupleDMF,
       washCoupleDMF,
       washDeprotDMF,
       washDMF,
-      totalDMF: coupleDMF + washDMF + piperidineSolution * 0.8
+      totalDMF: swellDMF + coupleDMF + washDMF + piperidineSolution * 0.8
     };
   }
+
 
   return {
     APP_VERSION, RESINS, RESIDUES, NONSTD, PG, REAGENTS, COUPLING_SYSTEMS,
