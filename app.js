@@ -16,17 +16,31 @@
     scale: '100', mass: '125', sequence: '', nTerm: 'H', cTerm: 'amide', nFmoc: false,
     system: 'dic-oxyma', aaEq: '3', numResidues: '', skipFirst: false,
     swellTimes: '3', swellVol: '6', coupleVol: '6', deprotVol: '6', deprots: '2',
-    washesCouple: '5', washCoupleVol: '6', washesDeprot: '5', washDeprotVol: '6'
+    washesCouple: '5', washCoupleVol: '6', washesDeprot: '5', washDeprotVol: '6',
+    cocktailVol: '7', tfaPct: '95', tfaWashes: '2', tfaWashVol: '1.5', antiVols: '3'
   };
+  const CD_FIELDS = ['cocktailVol', 'tfaPct', 'tfaWashes', 'tfaWashVol', 'antiVols'];
+  const DEFAULT_SCAVENGERS = [
+    { name: 'TIS', manual: '', pct: '2.5', solid: false },
+    { name: 'H2O', manual: '', pct: '2.5', solid: false },
+    { name: '', manual: '', pct: '', solid: false },
+    { name: '', manual: '', pct: '', solid: false },
+    { name: '', manual: '', pct: '', solid: false }
+  ];
+  const DEFAULT_ANTISOLVENTS = [
+    { name: 'MTBE', manual: '', pct: '70' },
+    { name: 'Heptane', manual: '', pct: '30' }
+  ];
   const MB_FIELDS = ['loading', 'protectedMW', 'freeMW', 'correction', 'yieldPct', 'scale', 'mass'];
   const SEQ_FIELDS = ['sequence', 'nTerm', 'cTerm', 'nFmoc'];
   const PLAN_FIELDS = ['aaEq', 'numResidues', 'skipFirst', 'swellTimes', 'swellVol', 'coupleVol', 'deprotVol', 'deprots', 'washesCouple', 'washCoupleVol', 'washesDeprot', 'washDeprotVol'];
-  const STATE_FIELDS = ['resin'].concat(MB_FIELDS, SEQ_FIELDS, ['system'], PLAN_FIELDS);
+  const STATE_FIELDS = ['resin'].concat(MB_FIELDS, SEQ_FIELDS, ['system'], PLAN_FIELDS, CD_FIELDS);
 
   let mode = 'scale';
   let last = null;      // last mass-balance result
   let lastSeq = null;   // last sequence MW result
   let lastPlan = null;  // last coupling plan
+  let lastCleavage = null; // last C&D plan
 
   /* ---------- storage (never required for the page to work) ---------- */
   function load(key, fallback) {
@@ -126,7 +140,7 @@
 
   /* ---------- state snapshot ---------- */
   function snapshot() {
-    const snap = { mode, reagentEqs: currentReagentEqs(), customResidues: readCustom() };
+    const snap = { mode, reagentEqs: currentReagentEqs(), customResidues: readCustom(), scavengers: readScavengers(), antisolvents: readAntisolvents() };
     STATE_FIELDS.forEach(id => { snap[id] = getField(id); });
     return snap;
   }
@@ -141,6 +155,8 @@
     });
     STATE_FIELDS.forEach(id => { if (snap[id] !== undefined) setField(id, snap[id]); });
     renderCustom(snap.customResidues || []);
+    renderScavengers(snap.scavengers || DEFAULT_SCAVENGERS);
+    renderAntisolvents(snap.antisolvents || DEFAULT_ANTISOLVENTS);
     if (!C.COUPLING_SYSTEMS[get('system').value]) setField('system', DEFAULTS.system);
     renderReagentEqs(snap.reagentEqs);
     setMode(snap.mode === 'mass' ? 'mass' : 'scale', false, false);
@@ -244,6 +260,7 @@
     get('outFinal').textContent = fmt(r.final, 'g');
     updateSequence();
     updatePlan();
+    updateCleavage();
     persist();
   }
 
@@ -435,6 +452,129 @@
     list.forEach(c => box.appendChild(customRow(c)));
   }
 
+  /* ---------- cleavage & deprotection ---------- */
+  function scavengerRow(s) {
+    const row = document.createElement('div');
+    row.className = 'cd-row';
+    const sel = document.createElement('select');
+    sel.dataset.k = 'name';
+    sel.add(new Option('—', ''));
+    Object.keys(C.SCAVENGERS).forEach(k => sel.add(new Option(k === 'H2O' ? 'H₂O' : k, k)));
+    sel.add(new Option(t('other'), '__other'));
+    sel.value = [...sel.options].some(o => o.value === s.name) ? s.name : '';
+    const manual = document.createElement('input');
+    manual.dataset.k = 'manual'; manual.placeholder = t('customName'); manual.value = s.manual || ''; manual.autocomplete = 'off';
+    const pct = document.createElement('input');
+    pct.type = 'number'; pct.dataset.k = 'pct'; pct.placeholder = '%'; pct.min = '0'; pct.step = 'any'; pct.inputMode = 'decimal'; pct.value = s.pct || '';
+    const solidLbl = document.createElement('label');
+    solidLbl.className = 'sc-solid';
+    const solid = document.createElement('input');
+    solid.type = 'checkbox'; solid.dataset.k = 'solid'; solid.checked = !!s.solid;
+    solidLbl.append(solid, document.createTextNode(' ' + t('solidUnit')));
+    function sync() { const other = sel.value === '__other'; manual.hidden = !other; solidLbl.hidden = !other; }
+    sync();
+    [sel, manual, pct].forEach(el => el.addEventListener('input', () => { sync(); calculate(); }));
+    sel.addEventListener('change', () => { sync(); calculate(); });
+    solid.addEventListener('change', calculate);
+    row.append(sel, manual, pct, solidLbl);
+    return row;
+  }
+  function renderScavengers(list) {
+    const box = get('scavengers'); box.textContent = '';
+    list.forEach(s => box.appendChild(scavengerRow(s)));
+  }
+  function readScavengers() {
+    return [...document.querySelectorAll('#scavengers .cd-row')].map(row => ({
+      name: row.querySelector('[data-k=name]').value,
+      manual: row.querySelector('[data-k=manual]').value,
+      pct: row.querySelector('[data-k=pct]').value,
+      solid: row.querySelector('[data-k=solid]').checked
+    }));
+  }
+  function antisolventRow(a) {
+    const row = document.createElement('div');
+    row.className = 'cd-row';
+    const sel = document.createElement('select');
+    sel.dataset.k = 'name';
+    sel.add(new Option('—', ''));
+    C.ANTISOLVENTS.forEach(nm => sel.add(new Option(nm, nm)));
+    sel.add(new Option(t('other'), '__other'));
+    sel.value = [...sel.options].some(o => o.value === a.name) ? a.name : '';
+    const manual = document.createElement('input');
+    manual.dataset.k = 'manual'; manual.placeholder = t('customName'); manual.value = a.manual || ''; manual.autocomplete = 'off';
+    const pct = document.createElement('input');
+    pct.type = 'number'; pct.dataset.k = 'pct'; pct.placeholder = '%'; pct.min = '0'; pct.step = 'any'; pct.inputMode = 'decimal'; pct.value = a.pct || '';
+    function sync() { manual.hidden = sel.value !== '__other'; }
+    sync();
+    [sel, manual, pct].forEach(el => el.addEventListener('input', () => { sync(); calculate(); }));
+    sel.addEventListener('change', () => { sync(); calculate(); });
+    row.append(sel, manual, pct);
+    return row;
+  }
+  function renderAntisolvents(list) {
+    const box = get('antisolvents'); box.textContent = '';
+    list.forEach(a => box.appendChild(antisolventRow(a)));
+  }
+  function readAntisolvents() {
+    return [...document.querySelectorAll('#antisolvents .cd-row')].map(row => ({
+      name: row.querySelector('[data-k=name]').value,
+      manual: row.querySelector('[data-k=manual]').value,
+      pct: row.querySelector('[data-k=pct]').value
+    }));
+  }
+  function cocktailComponents() {
+    const comps = [{ name: 'TFA', pct: readNum('tfaPct'), solid: false }];
+    readScavengers().forEach(s => {
+      if (!s.name) return;
+      const other = s.name === '__other';
+      const name = other ? (s.manual.trim() || t('other')) : (s.name === 'H2O' ? 'H₂O' : s.name);
+      const solid = other ? s.solid : C.SCAVENGERS[s.name].solid;
+      comps.push({ name, pct: s.pct === '' ? NaN : Number(s.pct), solid });
+    });
+    return comps;
+  }
+  function antisolventList() {
+    return readAntisolvents().filter(a => a.name).map(a => ({
+      name: a.name === '__other' ? (a.manual.trim() || t('other')) : a.name,
+      pct: a.pct === '' ? NaN : Number(a.pct)
+    }));
+  }
+  function updateCleavage() {
+    const ids = ['cocktailTable', 'cdTotals'];
+    if (!last) {
+      ids.forEach(id => { get(id).innerHTML = ''; });
+      get('cocktailSum').textContent = ''; get('antiSum').textContent = ''; get('cdError').hidden = true;
+      return;
+    }
+    const plan = C.cleavagePlan({
+      peptideResin: last.peptideResin,
+      cocktailVol: readNum('cocktailVol'),
+      components: cocktailComponents(),
+      tfaWashes: readNum('tfaWashes'), tfaWashVol: readNum('tfaWashVol'),
+      antisolvents: antisolventList(), antisolventVols: readNum('antiVols')
+    });
+    lastCleavage = plan;
+    get('cocktailTable').innerHTML = table(
+      [t('thComponent'), { text: t('percent'), num: true }, { text: t('thAmount'), num: true }],
+      plan.components.map(c => [c.name, n(c.pct), { text: fmt(c.amount, c.unit), num: true }])
+    );
+    const sumBad = Math.abs(plan.pctSum - 100) > 0.01;
+    get('cocktailSum').textContent = t('cocktailSumMsg', { sum: C.formatNumber(plan.pctSum) });
+    get('cocktailSum').style.color = sumBad ? '#a42121' : '';
+    const antiBad = plan.antisolvents.length && Math.abs(plan.antiPctSum - 100) > 0.01;
+    get('antiSum').textContent = plan.antisolvents.length ? t('antiSumMsg', { sum: C.formatNumber(plan.antiPctSum) }) : '';
+    get('antiSum').style.color = antiBad ? '#a42121' : '';
+    const rows = [
+      [t('cocktailVolume'), { text: vol(plan.cocktailVolume), num: true }],
+      [t('tfaWashVolume'), { text: vol(plan.tfaWashVolume), num: true }],
+      [t('peptideCocktailVolume'), { text: vol(plan.peptideCocktailVolume), num: true }]
+    ];
+    plan.antisolvents.forEach(a => rows.push([a.name + ' (' + C.formatNumber(a.pct) + '%)', { text: vol(a.volume), num: true }]));
+    rows.push([t('antisolventVolume'), { text: vol(plan.antisolventVolume), num: true }]);
+    rows.push([t('precipitationVolume'), { text: vol(plan.precipitationVolume), num: true }]);
+    get('cdTotals').innerHTML = table([t('thItem'), { text: t('thAmount'), num: true }], rows);
+  }
+
   /* ---------- copy / reset ---------- */
   function resultsText() {
     const lines = [
@@ -481,6 +621,8 @@
     Object.keys(DEFAULTS).forEach(id => setField(id, DEFAULTS[id]));
     renderCustom([]);
     renderReagentEqs(null);
+    renderScavengers(DEFAULT_SCAVENGERS);
+    renderAntisolvents(DEFAULT_ANTISOLVENTS);
   }
   function reset() {
     applyDefaults();
@@ -492,9 +634,10 @@
   renderResinOptions();
   renderSystemOptions();
   renderPads();
+  for (let i = 0; i <= 6; i++) get('tfaWashes').add(new Option(String(i), String(i)));
   applyDefaults();
-  MB_FIELDS.concat(SEQ_FIELDS, PLAN_FIELDS).forEach(id => get(id).addEventListener('input', calculate));
-  ['nTerm', 'cTerm', 'nFmoc', 'skipFirst', 'swellTimes', 'swellVol', 'washesDeprot', 'washesCouple', 'coupleVol', 'deprotVol', 'washDeprotVol', 'washCoupleVol'].forEach(id => get(id).addEventListener('change', calculate));
+  MB_FIELDS.concat(SEQ_FIELDS, PLAN_FIELDS, CD_FIELDS).forEach(id => get(id).addEventListener('input', calculate));
+  ['nTerm', 'cTerm', 'nFmoc', 'skipFirst', 'swellTimes', 'swellVol', 'washesDeprot', 'washesCouple', 'coupleVol', 'deprotVol', 'washDeprotVol', 'washCoupleVol', 'tfaWashes'].forEach(id => get(id).addEventListener('change', calculate));
   get('resin').addEventListener('change', changeResin);
   get('system').addEventListener('change', changeSystem);
   get('project').addEventListener('change', applyProject);

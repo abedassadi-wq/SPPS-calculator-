@@ -257,6 +257,60 @@
     <p class="hint" data-i18n="planHint">Volumes are based on initial dry resin mass and do not account for resin swelling during the synthesis. Coupling washes are counted after every coupling (including repeat couplings); deprotection washes after every Fmoc removal, including the initial one.</p>
   </section>
 
+  <section class="card">
+    <h2 data-i18n="s6">6. Cleavage &amp; Deprotection (C&amp;D)</h2>
+    <p class="hint" data-i18n="cdIntro">All volumes are per gram of theoretical peptide–resin from section 4.</p>
+    <div id="cdError" class="error" role="alert" hidden></div>
+
+    <h3 data-i18n="cocktailTitle">Cleavage cocktail</h3>
+    <div class="grid">
+      <div class="field span2">
+        <label for="cocktailVol" data-i18n="cocktailVol">Cocktail volumes (mL per g peptide–resin)</label>
+        <input id="cocktailVol" type="number" inputmode="decimal" min="0" step="any" value="7">
+      </div>
+    </div>
+    <div class="grid">
+      <div class="field span2">
+        <label for="tfaPct" data-i18n="tfaPct">TFA percent (%)</label>
+        <input id="tfaPct" type="number" inputmode="decimal" min="0" max="100" step="any" value="95">
+      </div>
+    </div>
+    <p class="hint" data-i18n="scavTitle">Scavengers (choose up to 5, with each percent):</p>
+    <div id="scavengers" class="cd-list"></div>
+    <p class="hint" id="cocktailSum"></p>
+
+    <h3 data-i18n="cocktailAmounts">Cocktail amounts</h3>
+    <div class="table-wrap"><table id="cocktailTable"></table></div>
+
+    <h3 data-i18n="tfaWashTitle">TFA resin wash</h3>
+    <div class="steps">
+      <div class="step">
+        <div class="step-title" data-i18n="tfaWashStep">TFA wash</div>
+        <div class="field">
+          <label for="tfaWashes" data-i18n="washCount">Number of washes</label>
+          <select id="tfaWashes"></select>
+        </div>
+        <div class="field">
+          <label for="tfaWashVol" data-i18n="mlPerGpr">Volume (mL per g peptide–resin)</label>
+          <input id="tfaWashVol" type="number" inputmode="decimal" min="0" step="any" value="1.5">
+        </div>
+      </div>
+    </div>
+
+    <h3 data-i18n="antiTitle">Antisolvent precipitation</h3>
+    <div class="grid">
+      <div class="field span2">
+        <label for="antiVols" data-i18n="antiVols">Antisolvent volumes (× peptide–cocktail volume)</label>
+        <input id="antiVols" type="number" inputmode="decimal" min="0" step="any" value="3">
+      </div>
+    </div>
+    <div id="antisolvents" class="steps"></div>
+    <p class="hint" id="antiSum"></p>
+
+    <h3 data-i18n="cdTotalsTitle">C&amp;D totals</h3>
+    <div class="table-wrap"><table id="cdTotals"></table></div>
+  </section>
+
   <div class="version" id="version"></div>
 </main>
 <script src="./calc.js"></script>
