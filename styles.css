@@ -93,6 +93,14 @@ button:disabled { opacity: .45; cursor: not-allowed; }
 .step-title { font-size: 13px; font-weight: 800; color: #33445a; margin-bottom: 12px; }
 .step .field + .field { margin-top: 10px; }
 .step .field label { font-size: 12px; }
+".cd-list { display: grid; gap: 8px; }
+.cd-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.cd-row select { flex: 1; min-width: 130px; padding: 10px; }
+.cd-row input { padding: 10px; }
+.cd-row input[data-k="pct"] { width: 90px; }
+.cd-row input[data-k="manual"] { flex: 1; min-width: 120px; }
+.cd-row .sc-solid { display: flex; align-items: center; gap: 5px; font-size: 13px; font-weight: 700; white-space: nowrap; }
+.cd-row .sc-solid input { width: 18px; height: 18px; }
 .table-wrap { overflow-x: auto; }
 table { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
 th, td { padding: 8px 10px; border-bottom: 1px solid #e6ecf3; text-align: start; white-space: nowrap; }

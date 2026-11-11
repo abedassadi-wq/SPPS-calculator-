@@ -203,3 +203,27 @@ test('coupling plan can skip a pre-loaded first residue', () => {
   assert.deepEqual(plan.cycles.map(c => c.residue), ['G', 'A']);
   assert.equal(plan.cycles[0].cycle, 1);
 });
+
+test('cleavage & deprotection plan', () => {
+  const p = C.cleavagePlan({
+    peptideResin: 100, cocktailVol: 7,
+    components: [{ name: 'TFA', pct: 92.5, solid: false }, { name: 'H2O', pct: 2.5, solid: false }, { name: 'Phenol', pct: 5, solid: true }],
+    tfaWashes: 2, tfaWashVol: 1.5,
+    antisolvents: [{ name: 'MTBE', pct: 70 }, { name: 'Heptane', pct: 30 }], antisolventVols: 3
+  });
+  close(p.cocktailVolume, 700);               // 7 mL/g × 100 g
+  close(p.components[0].amount, 647.5);        // TFA 92.5% of 700 mL
+  assert.equal(p.components[0].unit, 'mL');
+  const phenol = p.components.find(c => c.name === 'Phenol');
+  close(phenol.amount, 35);                    // 5% of 700 → 35 g (solid)
+  assert.equal(phenol.unit, 'g');
+  close(p.pctSum, 100);
+  close(p.tfaWashVolume, 300);                 // 2 × 1.5 × 100
+  close(p.peptideCocktailVolume, 1000);        // 700 + 300
+  close(p.antisolventVolume, 3000);            // 3 × 1000
+  close(p.antisolvents[0].volume, 2100);       // MTBE 70%
+  close(p.antisolvents[1].volume, 900);        // Heptane 30%
+  close(p.precipitationVolume, 4000);          // 1000 + 3000
+  assert.equal(C.SCAVENGERS.DTT.solid, true);
+  assert.equal(C.SCAVENGERS.TIS.solid, false);
+});

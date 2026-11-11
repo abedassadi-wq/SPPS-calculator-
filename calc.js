@@ -9,7 +9,7 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
 
-  const APP_VERSION = '8.9';
+  const APP_VERSION = '9.0';
 
   // Average masses (g/mol)
   const H2O = 18.0153;
@@ -313,10 +313,54 @@
     };
   }
 
+  // Cleavage cocktail scavengers. solid = weighed in grams; liquids are measured in mL.
+  const SCAVENGERS = {
+    'DTT':         { solid: true },
+    'TIS':         { solid: false },
+    'DMS':         { solid: false },
+    'H2O':         { solid: false },
+    'Thioanisole': { solid: false },
+    'Phenol':      { solid: true },
+    'EDT':         { solid: false }
+  };
+  const ANTISOLVENTS = ['MTBE', 'Heptane', 'Diethyl ether', 'Hexane', 'Cold MTBE', 'Petroleum ether'];
+
+  /* Cleavage & deprotection (C&D) plan. All volumes relative to the peptide-resin mass.
+   * o: { peptideResin (g),
+   *      cocktailVol (mL cocktail / g peptide-resin),
+   *      components: [{ name, pct, solid }] (TFA + scavengers; % of the total cocktail),
+   *      tfaWashes, tfaWashVol (mL / g peptide-resin),
+   *      antisolvents: [{ name, pct }], antisolventVols (× the peptide-cocktail volume) } */
+  function cleavagePlan(o) {
+    const pr = o.peptideResin;
+    const cocktailVolume = pr * o.cocktailVol;
+    const comps = (o.components || []).filter(c => c.name && c.pct > 0);
+    const components = comps.map(c => ({
+      name: c.name, pct: c.pct, solid: !!c.solid,
+      amount: cocktailVolume * c.pct / 100,   // mL for liquids, g for solids
+      unit: c.solid ? 'g' : 'mL'
+    }));
+    const pctSum = comps.reduce((s, c) => s + c.pct, 0);
+
+    const tfaWashVolume = pr * o.tfaWashes * o.tfaWashVol;
+    const peptideCocktailVolume = cocktailVolume + tfaWashVolume;
+
+    const antisolventVolume = peptideCocktailVolume * o.antisolventVols;
+    const anti = (o.antisolvents || []).filter(a => a.name && a.pct > 0);
+    const antisolvents = anti.map(a => ({ name: a.name, pct: a.pct, volume: antisolventVolume * a.pct / 100 }));
+    const antiPctSum = anti.reduce((s, a) => s + a.pct, 0);
+    const precipitationVolume = peptideCocktailVolume + antisolventVolume;
+
+    return {
+      cocktailVolume, components, pctSum,
+      tfaWashVolume, peptideCocktailVolume,
+      antisolventVolume, antisolvents, antiPctSum, precipitationVolume
+    };
+  }
 
   return {
-    APP_VERSION, RESINS, RESIDUES, NONSTD, PG, REAGENTS, COUPLING_SYSTEMS,
+    APP_VERSION, RESINS, RESIDUES, NONSTD, PG, REAGENTS, COUPLING_SYSTEMS, SCAVENGERS, ANTISOLVENTS,
     constants: { H2O, NH3, HCL, FMOC, ACETYL },
-    massBalance, formatNumber, decimalsFor, customIndex, parseSequence, sequenceMW, buildingBlock, reagentAmount, couplingPlan
+    massBalance, formatNumber, decimalsFor, customIndex, parseSequence, sequenceMW, buildingBlock, reagentAmount, couplingPlan, cleavagePlan
   };
 });
