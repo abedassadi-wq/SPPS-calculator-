@@ -261,6 +261,7 @@
     updateSequence();
     updatePlan();
     updateCleavage();
+    updateSummary();
     persist();
   }
 
@@ -304,6 +305,12 @@
   const eq = x => ({ text: Number.isFinite(x) ? String(+x.toFixed(3)) : '—', num: true });
   // Large volumes read better in litres.
   const vol = mL => Math.abs(mL) >= 1000 ? fmt(mL / 1000, 'L') : fmt(mL, 'mL');
+  // Total used: switch to kg / L above 1000 g / 1000 mL, always 2 decimals.
+  const amount = (value, unit) => {
+    if (!Number.isFinite(value)) return '—';
+    if (value >= 1000) return C.formatNumber(value / 1000, 2) + (unit === 'g' ? ' kg' : ' L');
+    return C.formatNumber(value, 2) + ' ' + unit;
+  };
 
   function updatePlan() {
     const sys = C.COUPLING_SYSTEMS[get('system').value];
@@ -573,6 +580,36 @@
     rows.push([t('antisolventVolume'), { text: vol(plan.antisolventVolume), num: true }]);
     rows.push([t('precipitationVolume'), { text: vol(plan.precipitationVolume), num: true }]);
     get('cdTotals').innerHTML = table([t('thItem'), { text: t('thAmount'), num: true }], rows);
+  }
+
+  /* ---------- materials summary ---------- */
+  function updateSummary() {
+    const tbl = get('summaryTable');
+    const empty = get('summaryEmpty');
+    if (!last) { tbl.innerHTML = ''; empty.hidden = true; return; }
+    const mats = {};
+    const order = [];
+    function add(name, value, unit) {
+      if (!name || !Number.isFinite(value) || value <= 0) return;
+      const key = name + '\u0001' + unit;
+      if (!mats[key]) { mats[key] = { name, unit, value: 0 }; order.push(key); }
+      mats[key].value += value;
+    }
+    if (lastPlan) {
+      lastPlan.aaTotals.forEach(a => add(a.name, a.grams, 'g'));
+      lastPlan.reagentTotals.forEach(r => { if (Number.isFinite(r.mL)) add(r.name, r.mL, 'mL'); else add(r.name, r.grams, 'g'); });
+      add(t('matDMF'), lastPlan.totalDMF, 'mL');
+      add(t('matPiperidine'), lastPlan.piperidine, 'mL');
+    }
+    if (lastCleavage) {
+      lastCleavage.components.forEach(c => add(c.name, c.amount, c.unit));
+      add('TFA', lastCleavage.tfaWashVolume, 'mL');
+      lastCleavage.antisolvents.forEach(a => add(a.name, a.volume, 'mL'));
+    }
+    const rows = order.map(k => mats[k]).sort((a, b) => a.name.localeCompare(b.name))
+      .map(m => [m.name, { text: amount(m.value, m.unit), num: true }]);
+    tbl.innerHTML = rows.length ? table([t('thMaterial'), { text: t('thTotalUsed'), num: true }], rows) : '';
+    empty.hidden = rows.length > 0 || !!(lastPlan && lastPlan.couplings > 0);
   }
 
   /* ---------- copy / reset ---------- */
