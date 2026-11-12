@@ -7,6 +7,7 @@
 
   const STORE_STATE = 'spps.state.v1';
   const STORE_PROJECTS = 'spps.projects.v1';
+  const STORE_PRICES = 'spps.prices.v1';
 
   const BUILTIN_PROJECTS = {
     icr: { labelKey: 'projIcr', infoKey: 'infoIcr', values: { resin: 'rink-am', loading: '0.80', protectedMW: '3080', freeMW: '1898', yieldPct: '44', correction: '-222' } },
@@ -41,6 +42,7 @@
   let lastSeq = null;   // last sequence MW result
   let lastPlan = null;  // last coupling plan
   let lastCleavage = null; // last C&D plan
+  let prices = null;       // parsed price list
 
   /* ---------- storage (never required for the page to work) ---------- */
   function load(key, fallback) {
@@ -606,10 +608,71 @@
       add('TFA', lastCleavage.tfaWashVolume, 'mL');
       lastCleavage.antisolvents.forEach(a => add(a.name, a.volume, 'mL'));
     }
-    const rows = order.map(k => mats[k]).sort((a, b) => a.name.localeCompare(b.name))
-      .map(m => [m.name, { text: amount(m.value, m.unit), num: true }]);
-    tbl.innerHTML = rows.length ? table([t('thMaterial'), { text: t('thTotalUsed'), num: true }], rows) : '';
-    empty.hidden = rows.length > 0 || !!(lastPlan && lastPlan.couplings > 0);
+    const list = order.map(k => mats[k]).sort((a, b) => a.name.localeCompare(b.name));
+    empty.hidden = list.length > 0 || !!(lastPlan && lastPlan.couplings > 0);
+    if (!list.length) { tbl.innerHTML = ''; return; }
+
+    const cur = prices && prices.currency ? prices.currency + ' ' : '';
+    if (!prices) {
+      tbl.innerHTML = table([t('thMaterial'), { text: t('thTotalUsed'), num: true }],
+        list.map(m => [m.name, { text: amount(m.value, m.unit), num: true }]));
+      return;
+    }
+    let totalRMC = 0, missing = 0, priced = 0;
+    const rows = list.map(m => {
+      const c = C.materialCost(m, prices);
+      if (c && Number.isFinite(c.cost)) {
+        totalRMC += c.cost; priced++;
+        return [m.name, { text: amount(m.value, m.unit), num: true }, { text: C.formatNumber(c.price, 2), num: true }, { text: cur + C.formatNumber(c.cost, 2), num: true }];
+      }
+      missing++;
+      const why = c && c.needsDensity ? t('needDensity') : '—';
+      return [m.name, { text: amount(m.value, m.unit), num: true }, { text: why, num: true }, { text: '—', num: true }];
+    });
+    const foot = [t('totalRMC'), '', '', { text: cur + C.formatNumber(totalRMC, 2), num: true }];
+    tbl.innerHTML = table(
+      [t('thMaterial'), { text: t('thTotalUsed'), num: true }, { text: t('thPricePerKg'), num: true }, { text: t('thCost'), num: true }],
+      rows, foot);
+    const costPerG = Number.isFinite(last.final) && last.final > 0 ? totalRMC / last.final : NaN;
+    get('rmcNote').textContent = t('rmcNote', {
+      priced: String(priced), missing: String(missing),
+      perg: Number.isFinite(costPerG) ? cur + C.formatNumber(costPerG, 2) : '—'
+    });
+    get('rmcNote').hidden = false;
+  }
+
+  /* ---------- prices ---------- */
+  function applyPrices(text) {
+    prices = text ? C.parsePrices(text) : null;
+    get('priceStatus').textContent = prices ? t('pricesLoaded', { n: String(prices.entries.length) }) : '';
+    get('clearPrices').hidden = !prices;
+    get('rmcNote').hidden = !prices;
+  }
+  function loadPricesFromStore() {
+    const text = load(STORE_PRICES, null);
+    if (text) applyPrices(text);
+  }
+  function onPriceFile(ev) {
+    const file = ev.target.files && ev.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const text = String(reader.result || '');
+      store(STORE_PRICES, text);
+      applyPrices(text);
+      calculate();
+    };
+    reader.readAsText(file);
+    ev.target.value = '';
+  }
+  function clearPrices() {
+    try { localStorage.removeItem(STORE_PRICES); } catch (e) {}
+    prices = null;
+    get('priceStatus').textContent = '';
+    get('clearPrices').hidden = true;
+    get('rmcNote').hidden = true;
+    get('rmcNote').textContent = '';
+    calculate();
   }
 
   /* ---------- copy / reset ---------- */
@@ -694,6 +757,10 @@
   get('reset').addEventListener('click', reset);
   get('print').addEventListener('click', () => window.print());
   get('copy').addEventListener('click', copyResults);
+  get('uploadPrices').addEventListener('click', () => get('priceFile').click());
+  get('priceFile').addEventListener('change', onPriceFile);
+  get('clearPrices').addEventListener('click', clearPrices);
+  loadPricesFromStore();
 
   const saved = load(STORE_STATE, null);
   renderProjectOptions(saved && saved.project);

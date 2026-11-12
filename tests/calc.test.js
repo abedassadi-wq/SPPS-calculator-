@@ -227,3 +227,34 @@ test('cleavage & deprotection plan', () => {
   assert.equal(C.SCAVENGERS.DTT.solid, true);
   assert.equal(C.SCAVENGERS.TIS.solid, false);
 });
+
+test('price parsing and material cost', () => {
+  const csv = [
+    'material,cas,price_per_kg,density_g_per_ml,currency',
+    'Fmoc-Ala-OH,35661-39-3,120,,USD',
+    'DMF,68-12-2,3.5,,USD',
+    'TFA,76-05-1,25,,USD',
+    'Mystuff,,,0.9,USD',           // liquid with explicit density but no price
+    'Customliq,,10,0.8,USD'
+  ].join('\n');
+  const prices = C.parsePrices(csv);
+  assert.equal(prices.currency, 'USD');
+  // solid: 186.8 g -> 0.1868 kg * 120
+  close(C.materialCost({ name: 'Fmoc-Ala-OH', value: 186.8, unit: 'g' }, prices).cost, 22.416);
+  // liquid via built-in density: name has a "(total)" tag that is stripped
+  close(C.materialCost({ name: 'DMF (total)', value: 54450, unit: 'mL' }, prices).cost, 54.45 * 0.944 * 3.5, 0.01);
+  // TFA built-in density 1.489
+  close(C.materialCost({ name: 'TFA', value: 1480, unit: 'mL' }, prices).cost, 1.48 * 1.489 * 25, 0.01);
+  // custom liquid with density from the file
+  close(C.materialCost({ name: 'Customliq', value: 1000, unit: 'mL' }, prices).cost, 1 * 0.8 * 10, 1e-9);
+  // no price -> null
+  assert.equal(C.materialCost({ name: 'Mystuff', value: 100, unit: 'mL' }, prices), null);
+  // priced liquid with no known density -> needsDensity
+  const noDens = C.parsePrices('material,price_per_kg\nWeird,5');
+  const r = C.materialCost({ name: 'Weird', value: 100, unit: 'mL' }, noDens);
+  assert.equal(r.needsDensity, true);
+  assert.ok(Number.isNaN(r.cost));
+  // name normalisation
+  assert.equal(C.normalizeMaterial('Piperidine (neat)'), 'piperidine');
+  assert.equal(C.densityOf('H₂O'), 1.0);
+});

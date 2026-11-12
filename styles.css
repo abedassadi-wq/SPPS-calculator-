@@ -85,6 +85,7 @@ input[type=number], textarea { direction: ltr; }
   padding: 12px; font: inherit; font-weight: 750; cursor: pointer; color: #182235;
 }
 .actions button.primary { background: #182235; border-color: #182235; color: #fff; }
+.actions .btn { flex: 1; min-width: 120px; border: 1px solid #bfccda; background: #fff; border-radius: 10px; padding: 12px; font: inherit; font-weight: 750; cursor: pointer; color: #182235; text-align: center; text-decoration: none; }
 .actions button.danger { color: #a42121; border-color: #e3b4b4; }
 button:disabled { opacity: .45; cursor: not-allowed; }
 
