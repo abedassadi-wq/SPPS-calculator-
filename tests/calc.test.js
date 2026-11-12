@@ -254,6 +254,13 @@ test('price parsing and material cost', () => {
   const r = C.materialCost({ name: 'Weird', value: 100, unit: 'mL' }, noDens);
   assert.equal(r.needsDensity, true);
   assert.ok(Number.isNaN(r.cost));
+  // price per litre: DMF $2.5/L, 100 L used -> $250 (the user's example)
+  const perL = C.parsePrices('material,price,price_unit,currency\nDMF,2.5,L,USD\nTIS,0.3,mL,USD');
+  close(C.materialCost({ name: 'DMF (total)', value: 100000, unit: 'mL' }, perL).cost, 250);
+  close(C.materialCost({ name: 'TIS', value: 26.77, unit: 'mL' }, perL).cost, 26.77 * 0.3);
+  assert.equal(C.materialCost({ name: 'DMF (total)', value: 100000, unit: 'mL' }, perL).priceUnit, 'L');
+  assert.equal(C.normalizePriceUnit('per L'), 'L');
+  assert.equal(C.normalizePriceUnit('/kg'), 'kg');
   // name normalisation
   assert.equal(C.normalizeMaterial('Piperidine (neat)'), 'piperidine');
   assert.equal(C.densityOf('H₂O'), 1.0);

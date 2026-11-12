@@ -9,7 +9,7 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
 
-  const APP_VERSION = '9.3';
+  const APP_VERSION = '9.4';
 
   // Average masses (g/mol)
   const H2O = 18.0153;
@@ -375,7 +375,17 @@
     return DENSITY[normalizeMaterial(name)];
   }
 
-  // Parse a price CSV. Columns, case-insensitive: material, cas, price_per_kg (or price), density_g_per_ml (optional), currency (optional).
+  // Normalise a price unit to one of kg | g | L | mL.
+  function normalizePriceUnit(u) {
+    const s = String(u || '').toLowerCase().replace(/[\s._/]/g, '').replace(/^per/, '').replace(/^\//, '');
+    if (s === 'kg' || s === 'kilo' || s === 'kilogram') return 'kg';
+    if (s === 'g' || s === 'gram' || s === 'gr') return 'g';
+    if (s === 'l' || s === 'lt' || s === 'liter' || s === 'litre') return 'L';
+    if (s === 'ml') return 'mL';
+    return '';
+  }
+  // Parse a price CSV. Columns, case-insensitive: material, cas, price (or price_per_kg),
+  // price_unit (kg|g|L|mL — default kg, or L when the column is price_per_l), density_g_per_ml (optional), currency (optional).
   function parsePrices(text) {
     const lines = String(text || '').split(/\r?\n/).filter(l => l.trim() !== '');
     if (!lines.length) return { entries: [], byName: {}, currency: '' };
@@ -392,18 +402,26 @@
     };
     const header = splitRow(lines[0]).map(h => h.toLowerCase().replace(/\s+/g, '_'));
     const idx = (...names) => { for (const n of names) { const i = header.indexOf(n); if (i >= 0) return i; } return -1; };
-    const ci = { material: idx('material', 'name'), cas: idx('cas', 'cas_number'), price: idx('price_per_kg', 'price', 'price_kg'), density: idx('density_g_per_ml', 'density'), currency: idx('currency') };
+    const ci = {
+      material: idx('material', 'name'), cas: idx('cas', 'cas_number'),
+      price: idx('price', 'price_per_kg', 'price_kg', 'price_per_l', 'price_l'),
+      unit: idx('price_unit', 'unit'), density: idx('density_g_per_ml', 'density'), currency: idx('currency')
+    };
+    // If the only price column was price_per_kg / price_per_l, that sets the default unit.
+    const headerUnit = header.indexOf('price_per_l') >= 0 || header.indexOf('price_l') >= 0 ? 'L'
+      : (header.indexOf('price_per_kg') >= 0 || header.indexOf('price_kg') >= 0 ? 'kg' : '');
     const entries = []; const byName = {}; let currency = '';
     for (let r = 1; r < lines.length; r++) {
       const cols = splitRow(lines[r]);
       const material = ci.material >= 0 ? cols[ci.material] : cols[0];
       if (!material) continue;
       const price = ci.price >= 0 ? Number(cols[ci.price]) : NaN;
+      const priceUnit = (ci.unit >= 0 && normalizePriceUnit(cols[ci.unit])) || headerUnit || 'kg';
       const density = ci.density >= 0 && cols[ci.density] !== '' && cols[ci.density] !== undefined ? Number(cols[ci.density]) : NaN;
       const cas = ci.cas >= 0 ? cols[ci.cas] : '';
       const cur = ci.currency >= 0 ? cols[ci.currency] : '';
       if (cur && !currency) currency = cur;
-      const entry = { material, cas, price, density, currency: cur };
+      const entry = { material, cas, price, priceUnit, density, currency: cur };
       entries.push(entry);
       byName[normalizeMaterial(material)] = entry;
     }
@@ -411,24 +429,32 @@
   }
 
   /* Cost of one material line. material: { name, value, unit ('g'|'mL') }; prices from parsePrices.
-   * Returns { kg, price, cost } or null when no price (or no density for a liquid). */
+   * Price can be per kg/g (mass) or per L/mL (volume); liquids priced by mass (or solids by volume)
+   * use the density. Returns { price, priceUnit, qty, cost } or null when no price, with
+   * needsDensity: true when a density would be required but none is known. */
   function materialCost(material, prices) {
     const entry = prices && prices.byName[normalizeMaterial(material.name)];
     if (!entry || !(entry.price > 0)) return null;
-    let kg;
-    if (material.unit === 'g') kg = material.value / 1000;
-    else {
-      const d = entry.density > 0 ? entry.density : densityOf(material.name);
-      if (!(d > 0)) return { kg: NaN, price: entry.price, cost: NaN, needsDensity: true };
-      kg = material.value * d / 1000;
+    const pu = entry.priceUnit || 'kg';
+    const density = entry.density > 0 ? entry.density : densityOf(material.name);
+    if (pu === 'kg' || pu === 'g') {
+      let grams;
+      if (material.unit === 'g') grams = material.value;
+      else { if (!(density > 0)) return { price: entry.price, priceUnit: pu, cost: NaN, needsDensity: true }; grams = material.value * density; }
+      const perG = pu === 'kg' ? entry.price / 1000 : entry.price;
+      return { price: entry.price, priceUnit: pu, qty: grams, cost: grams * perG };
     }
-    return { kg, price: entry.price, cost: kg * entry.price };
+    let mL;
+    if (material.unit === 'mL') mL = material.value;
+    else { if (!(density > 0)) return { price: entry.price, priceUnit: pu, cost: NaN, needsDensity: true }; mL = material.value / density; }
+    const perML = pu === 'L' ? entry.price / 1000 : entry.price;
+    return { price: entry.price, priceUnit: pu, qty: mL, cost: mL * perML };
   }
 
   return {
     APP_VERSION, RESINS, RESIDUES, NONSTD, PG, REAGENTS, COUPLING_SYSTEMS, SCAVENGERS, ANTISOLVENTS, DENSITY,
     constants: { H2O, NH3, HCL, FMOC, ACETYL },
     massBalance, formatNumber, decimalsFor, customIndex, parseSequence, sequenceMW, buildingBlock, reagentAmount, couplingPlan, cleavagePlan,
-    normalizeMaterial, densityOf, parsePrices, materialCost
+    normalizeMaterial, normalizePriceUnit, densityOf, parsePrices, materialCost
   };
 });

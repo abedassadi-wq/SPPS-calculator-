@@ -300,7 +300,10 @@
     };
     let html = '<thead><tr>' + head.map(c => cell('th', c)).join('') + '</tr></thead><tbody>';
     html += rows.map(r => '<tr>' + r.map(c => cell('td', c)).join('') + '</tr>').join('') + '</tbody>';
-    if (foot) html += '<tfoot><tr>' + foot.map(c => cell('td', c)).join('') + '</tr></tfoot>';
+    if (foot) {
+      const footRows = Array.isArray(foot[0]) ? foot : [foot];
+      html += '<tfoot>' + footRows.map(r => '<tr>' + r.map(c => cell('td', c)).join('') + '</tr>').join('') + '</tfoot>';
+    }
     return html;
   }
   const n = (x, d) => ({ text: Number.isFinite(x) ? C.formatNumber(x, d) : '—', num: true });
@@ -618,26 +621,28 @@
         list.map(m => [m.name, { text: amount(m.value, m.unit), num: true }]));
       return;
     }
-    let totalRMC = 0, missing = 0, priced = 0;
+    const unitLabel = { kg: 'kg', g: 'g', L: 'L', mL: 'mL' };
+    let totalCost = 0, missing = 0, priced = 0;
     const rows = list.map(m => {
       const c = C.materialCost(m, prices);
       if (c && Number.isFinite(c.cost)) {
-        totalRMC += c.cost; priced++;
-        return [m.name, { text: amount(m.value, m.unit), num: true }, { text: C.formatNumber(c.price, 2), num: true }, { text: cur + C.formatNumber(c.cost, 2), num: true }];
+        totalCost += c.cost; priced++;
+        const priceText = cur + C.formatNumber(c.price, 2) + ' /' + (unitLabel[c.priceUnit] || c.priceUnit);
+        return [m.name, { text: amount(m.value, m.unit), num: true }, { text: priceText, num: true }, { text: cur + C.formatNumber(c.cost, 2), num: true }];
       }
       missing++;
       const why = c && c.needsDensity ? t('needDensity') : '—';
       return [m.name, { text: amount(m.value, m.unit), num: true }, { text: why, num: true }, { text: '—', num: true }];
     });
-    const foot = [t('totalRMC'), '', '', { text: cur + C.formatNumber(totalRMC, 2), num: true }];
+    const rmc = Number.isFinite(last.final) && last.final > 0 ? totalCost / last.final : NaN;
+    const foot = [
+      [t('totalRMC'), '', '', { text: cur + C.formatNumber(totalCost, 2), num: true }],
+      [t('rmcPerG'), '', '', { text: Number.isFinite(rmc) ? cur + C.formatNumber(rmc, 2) + ' /g' : '—', num: true }]
+    ];
     tbl.innerHTML = table(
-      [t('thMaterial'), { text: t('thTotalUsed'), num: true }, { text: t('thPricePerKg'), num: true }, { text: t('thCost'), num: true }],
+      [t('thMaterial'), { text: t('thTotalUsed'), num: true }, { text: t('thPrice'), num: true }, { text: t('thCost'), num: true }],
       rows, foot);
-    const costPerG = Number.isFinite(last.final) && last.final > 0 ? totalRMC / last.final : NaN;
-    get('rmcNote').textContent = t('rmcNote', {
-      priced: String(priced), missing: String(missing),
-      perg: Number.isFinite(costPerG) ? cur + C.formatNumber(costPerG, 2) : '—'
-    });
+    get('rmcNote').textContent = t('rmcNote', { priced: String(priced), missing: String(missing) });
     get('rmcNote').hidden = false;
   }
 

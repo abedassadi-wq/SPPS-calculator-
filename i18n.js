@@ -180,12 +180,13 @@
       downloadTemplate: 'Download price template',
       uploadPrices: 'Upload prices (CSV)',
       clearPrices: 'Clear prices',
-      pricesLoaded: 'Prices loaded ({n} materials). Costs are matched by material name.',
-      thPricePerKg: 'Price / kg',
+      pricesLoaded: 'Prices loaded ({n} materials). Price can be per kg, g, L or mL (price_unit column); matched by material name.',
+      thPrice: 'Unit price',
       thCost: 'Cost',
-      totalRMC: 'Total RMC (raw material cost)',
+      totalRMC: 'Total cost (all materials)',
+      rmcPerG: 'RMC (cost per g final peptide)',
       needDensity: 'need density',
-      rmcNote: 'Priced {priced} materials, {missing} without a price. Cost per g final peptide: {perg}.',
+      rmcNote: 'Priced {priced} materials, {missing} without a price. RMC = total cost ÷ grams of final peptide.',
       version: 'Version {v} · Works offline · No account required',
       copyHeader: 'SPPS Resin Calculator v{v}'
     }
