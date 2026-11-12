@@ -9,7 +9,7 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
 
-  const APP_VERSION = '9.2';
+  const APP_VERSION = '9.3';
 
   // Average masses (g/mol)
   const H2O = 18.0153;
@@ -358,9 +358,77 @@
     };
   }
 
+  // Densities (g/mL) of the liquids the app can meter, so a price per kg can be applied to a volume.
+  const DENSITY = {
+    'dmf': 0.944, 'piperidine': 0.862, 'tfa': 1.489,
+    'dic': 0.806, 'dipea': 0.742, 'nmm': 0.920, 'collidine': 0.917, '2,4,6-collidine': 0.917,
+    'tis': 0.773, 'dms': 0.846, 'h2o': 1.0, 'h₂o': 1.0, 'water': 1.0,
+    'thioanisole': 1.058, 'edt': 1.123,
+    'mtbe': 0.740, 'cold mtbe': 0.740, 'heptane': 0.684, 'diethyl ether': 0.713, 'hexane': 0.659, 'petroleum ether': 0.64
+  };
+
+  // Normalise a material name for matching: lowercase, drop a trailing "(...)" tag, collapse spaces.
+  function normalizeMaterial(name) {
+    return String(name || '').toLowerCase().replace(/\s*\([^)]*\)\s*$/, '').replace(/\s+/g, ' ').trim();
+  }
+  function densityOf(name) {
+    return DENSITY[normalizeMaterial(name)];
+  }
+
+  // Parse a price CSV. Columns, case-insensitive: material, cas, price_per_kg (or price), density_g_per_ml (optional), currency (optional).
+  function parsePrices(text) {
+    const lines = String(text || '').split(/\r?\n/).filter(l => l.trim() !== '');
+    if (!lines.length) return { entries: [], byName: {}, currency: '' };
+    const splitRow = l => {
+      const out = []; let cur = ''; let q = false;
+      for (let i = 0; i < l.length; i++) {
+        const c = l[i];
+        if (c === '"') { if (q && l[i + 1] === '"') { cur += '"'; i++; } else q = !q; }
+        else if (c === ',' && !q) { out.push(cur); cur = ''; }
+        else cur += c;
+      }
+      out.push(cur);
+      return out.map(s => s.trim());
+    };
+    const header = splitRow(lines[0]).map(h => h.toLowerCase().replace(/\s+/g, '_'));
+    const idx = (...names) => { for (const n of names) { const i = header.indexOf(n); if (i >= 0) return i; } return -1; };
+    const ci = { material: idx('material', 'name'), cas: idx('cas', 'cas_number'), price: idx('price_per_kg', 'price', 'price_kg'), density: idx('density_g_per_ml', 'density'), currency: idx('currency') };
+    const entries = []; const byName = {}; let currency = '';
+    for (let r = 1; r < lines.length; r++) {
+      const cols = splitRow(lines[r]);
+      const material = ci.material >= 0 ? cols[ci.material] : cols[0];
+      if (!material) continue;
+      const price = ci.price >= 0 ? Number(cols[ci.price]) : NaN;
+      const density = ci.density >= 0 && cols[ci.density] !== '' && cols[ci.density] !== undefined ? Number(cols[ci.density]) : NaN;
+      const cas = ci.cas >= 0 ? cols[ci.cas] : '';
+      const cur = ci.currency >= 0 ? cols[ci.currency] : '';
+      if (cur && !currency) currency = cur;
+      const entry = { material, cas, price, density, currency: cur };
+      entries.push(entry);
+      byName[normalizeMaterial(material)] = entry;
+    }
+    return { entries, byName, currency };
+  }
+
+  /* Cost of one material line. material: { name, value, unit ('g'|'mL') }; prices from parsePrices.
+   * Returns { kg, price, cost } or null when no price (or no density for a liquid). */
+  function materialCost(material, prices) {
+    const entry = prices && prices.byName[normalizeMaterial(material.name)];
+    if (!entry || !(entry.price > 0)) return null;
+    let kg;
+    if (material.unit === 'g') kg = material.value / 1000;
+    else {
+      const d = entry.density > 0 ? entry.density : densityOf(material.name);
+      if (!(d > 0)) return { kg: NaN, price: entry.price, cost: NaN, needsDensity: true };
+      kg = material.value * d / 1000;
+    }
+    return { kg, price: entry.price, cost: kg * entry.price };
+  }
+
   return {
-    APP_VERSION, RESINS, RESIDUES, NONSTD, PG, REAGENTS, COUPLING_SYSTEMS, SCAVENGERS, ANTISOLVENTS,
+    APP_VERSION, RESINS, RESIDUES, NONSTD, PG, REAGENTS, COUPLING_SYSTEMS, SCAVENGERS, ANTISOLVENTS, DENSITY,
     constants: { H2O, NH3, HCL, FMOC, ACETYL },
-    massBalance, formatNumber, decimalsFor, customIndex, parseSequence, sequenceMW, buildingBlock, reagentAmount, couplingPlan, cleavagePlan
+    massBalance, formatNumber, decimalsFor, customIndex, parseSequence, sequenceMW, buildingBlock, reagentAmount, couplingPlan, cleavagePlan,
+    normalizeMaterial, densityOf, parsePrices, materialCost
   };
 });

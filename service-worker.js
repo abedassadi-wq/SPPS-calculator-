@@ -3,7 +3,7 @@ importScripts('./calc.js');
 const CACHE_NAME = 'spps-resin-v' + self.SPPSCalc.APP_VERSION;
 const ASSETS = [
   './', './index.html', './styles.css', './calc.js', './i18n.js', './app.js', './manifest.webmanifest',
-  './icon-180.png', './icon-192.png', './icon-512.png', './icon-maskable-512.png'
+  './icon-180.png', './icon-192.png', './icon-512.png', './icon-maskable-512.png', './prices-template.csv', './robots.txt'
 ];
 
 self.addEventListener('install', event => {

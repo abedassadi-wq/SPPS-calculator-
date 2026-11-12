@@ -316,7 +316,15 @@
   <section class="card">
     <h2 data-i18n="s7">7. Materials summary</h2>
     <p class="hint" data-i18n="summaryHint">Everything used across the whole process. Amounts above 1000 mL or 1000 g are shown in L or kg (2 decimals).</p>
+    <div class="actions no-print">
+      <a class="btn" id="downloadTemplate" href="./prices-template.csv" download="spps-prices-template.csv" data-i18n="downloadTemplate">Download price template</a>
+      <button type="button" id="uploadPrices" class="primary" data-i18n="uploadPrices">Upload prices (CSV)</button>
+      <button type="button" id="clearPrices" class="danger" data-i18n="clearPrices" hidden>Clear prices</button>
+    </div>
+    <input type="file" id="priceFile" accept=".csv,text/csv" hidden>
+    <p class="hint" id="priceStatus"></p>
     <div class="table-wrap"><table id="summaryTable"></table></div>
+    <p class="hint" id="rmcNote" hidden></p>
     <p class="hint" id="summaryEmpty" data-i18n="summaryEmpty" hidden>Enter a sequence or a residue count in section 5 to include the amino acids and reagents.</p>
   </section>
 
