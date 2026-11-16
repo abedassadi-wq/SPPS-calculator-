@@ -611,7 +611,8 @@
     rm.type = 'button'; rm.className = 'no-print'; rm.textContent = '✕';
     rm.setAttribute('aria-label', t('removeCustom'));
     rm.addEventListener('click', () => { row.remove(); calculate(); });
-    row.append(mk('pctA', '%'), mk('pctB', '%'), mk('washes', '#'), mk('volumesPerWash', 'vol'), rm);
+    // Order: antisolvent A %, antisolvent B %, volumes per wash, number of washes.
+    row.append(mk('pctA', '%'), mk('pctB', '%'), mk('volumesPerWash', 'vol'), mk('washes', '#'), rm);
     return row;
   }
   function renderAntiWashes(list) {
@@ -697,7 +698,9 @@
     rows.push([t('tfaTotalRow'), { text: vol(plan.tfa.total), num: true }]);
     get('cdTotals').innerHTML = table([t('thItem'), { text: t('thAmount'), num: true }], rows);
     // header row for the wash table
-    get('antiWashHead').textContent = t('antiWashCols', { a: aw.nameA, b: aw.nameB });
+    get('antiWashHead').innerHTML = aw.rows.length || true ? [
+      aw.nameA + ' %', aw.nameB + ' %', t('awVolumes'), t('awWashes')
+    ].map(x => '<span>' + esc(x) + '</span>').join('') : '';
   }
 
   /* ---------- materials summary ---------- */
