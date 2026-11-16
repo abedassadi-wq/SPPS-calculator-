@@ -9,7 +9,7 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
 
-  const APP_VERSION = '9.4';
+  const APP_VERSION = '9.5';
 
   // Average masses (g/mol)
   const H2O = 18.0153;
@@ -387,14 +387,27 @@
   // Parse a price CSV. Columns, case-insensitive: material, cas, price (or price_per_kg),
   // price_unit (kg|g|L|mL — default kg, or L when the column is price_per_l), density_g_per_ml (optional), currency (optional).
   function parsePrices(text) {
-    const lines = String(text || '').split(/\r?\n/).filter(l => l.trim() !== '');
+    // Strip a UTF-8 BOM that Excel often adds, then split into non-empty lines.
+    const clean = String(text || '').replace(/^﻿/, '');
+    const lines = clean.split(/\r?\n/).filter(l => l.trim() !== '');
     if (!lines.length) return { entries: [], byName: {}, currency: '' };
+    // Auto-detect the delimiter from the header line: Excel in some locales uses ';' or a tab.
+    const header0 = lines[0];
+    const count = ch => (header0.match(new RegExp('\\' + ch, 'g')) || []).length;
+    const delim = count(';') > count(',') ? ';' : (count('\t') > count(',') ? '\t' : ',');
+    // With a ';' delimiter, numbers may use a decimal comma (e.g. "2,5").
+    const num = v => {
+      let s = String(v == null ? '' : v).trim();
+      if (s === '') return NaN;
+      if (delim !== ',' && /^-?\d+,\d+$/.test(s)) s = s.replace(',', '.');
+      return Number(s);
+    };
     const splitRow = l => {
       const out = []; let cur = ''; let q = false;
       for (let i = 0; i < l.length; i++) {
         const c = l[i];
         if (c === '"') { if (q && l[i + 1] === '"') { cur += '"'; i++; } else q = !q; }
-        else if (c === ',' && !q) { out.push(cur); cur = ''; }
+        else if (c === delim && !q) { out.push(cur); cur = ''; }
         else cur += c;
       }
       out.push(cur);
@@ -415,9 +428,9 @@
       const cols = splitRow(lines[r]);
       const material = ci.material >= 0 ? cols[ci.material] : cols[0];
       if (!material) continue;
-      const price = ci.price >= 0 ? Number(cols[ci.price]) : NaN;
+      const price = ci.price >= 0 ? num(cols[ci.price]) : NaN;
       const priceUnit = (ci.unit >= 0 && normalizePriceUnit(cols[ci.unit])) || headerUnit || 'kg';
-      const density = ci.density >= 0 && cols[ci.density] !== '' && cols[ci.density] !== undefined ? Number(cols[ci.density]) : NaN;
+      const density = ci.density >= 0 ? num(cols[ci.density]) : NaN;
       const cas = ci.cas >= 0 ? cols[ci.cas] : '';
       const cur = ci.currency >= 0 ? cols[ci.currency] : '';
       if (cur && !currency) currency = cur;

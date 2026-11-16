@@ -261,6 +261,15 @@ test('price parsing and material cost', () => {
   assert.equal(C.materialCost({ name: 'DMF (total)', value: 100000, unit: 'mL' }, perL).priceUnit, 'L');
   assert.equal(C.normalizePriceUnit('per L'), 'L');
   assert.equal(C.normalizePriceUnit('/kg'), 'kg');
+  // semicolon delimiter with a decimal comma (Excel in some locales)
+  const semi = C.parsePrices('material;cas;price;price_unit;currency\nDMF;68-12-2;2,5;L;USD');
+  assert.equal(semi.entries.length, 1);
+  close(C.materialCost({ name: 'DMF (total)', value: 100000, unit: 'mL' }, semi).cost, 250);
+  // tab delimiter and a UTF-8 BOM
+  const tab = C.parsePrices('material\tprice\tprice_unit\nTFA\t22\tL');
+  close(C.materialCost({ name: 'TFA', value: 1000, unit: 'mL' }, tab).cost, 22);
+  const bom = C.parsePrices('\uFEFFmaterial,price,price_unit\nMTBE,4,L');
+  close(C.materialCost({ name: 'MTBE', value: 1000, unit: 'mL' }, bom).cost, 4);
   // name normalisation
   assert.equal(C.normalizeMaterial('Piperidine (neat)'), 'piperidine');
   assert.equal(C.densityOf('H₂O'), 1.0);
