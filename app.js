@@ -32,6 +32,9 @@
     { name: 'MTBE', manual: '', pct: '70' },
     { name: 'Heptane', manual: '', pct: '30' }
   ];
+  const DEFAULT_ANTIWASHES = [
+    { pctA: '70', pctB: '30', washes: '4', volumesPerWash: '4' }
+  ];
   const MB_FIELDS = ['loading', 'protectedMW', 'freeMW', 'correction', 'yieldPct', 'scale', 'mass'];
   const SEQ_FIELDS = ['sequence', 'nTerm', 'cTerm', 'nFmoc'];
   const PLAN_FIELDS = ['aaEq', 'numResidues', 'skipFirst', 'swellTimes', 'swellVol', 'coupleVol', 'deprotVol', 'deprots', 'washesCouple', 'washCoupleVol', 'washesDeprot', 'washDeprotVol'];
@@ -204,7 +207,7 @@
 
   /* ---------- state snapshot ---------- */
   function snapshot() {
-    const snap = { mode, reagentEqs: currentReagentEqs(), customResidues: readCustom(), scavengers: readScavengers(), antisolvents: readAntisolvents() };
+    const snap = { mode, reagentEqs: currentReagentEqs(), customResidues: readCustom(), scavengers: readScavengers(), antisolvents: readAntisolvents(), antiWashes: readAntiWashes() };
     STATE_FIELDS.forEach(id => { snap[id] = getField(id); });
     return snap;
   }
@@ -214,13 +217,11 @@
       snap = Object.assign({}, snap, { washesCouple: snap.washes, washesDeprot: snap.washes, washCoupleVol: snap.washVol, washDeprotVol: snap.washVol });
     }
     if (snap.coupleVol === undefined) snap = Object.assign({}, snap, { coupleVol: DEFAULTS.coupleVol });
-    ['coupleVol', 'deprotVol', 'washDeprotVol', 'washCoupleVol', 'swellVol', 'swellTimes'].forEach(id => {
-      if (snap[id] !== undefined && !get(id).querySelector('option[value="' + snap[id] + '"]')) snap[id] = DEFAULTS[id];
-    });
     STATE_FIELDS.forEach(id => { if (snap[id] !== undefined) setField(id, snap[id]); });
     renderCustom(snap.customResidues || []);
     renderScavengers(snap.scavengers || DEFAULT_SCAVENGERS);
     renderAntisolvents(snap.antisolvents || DEFAULT_ANTISOLVENTS);
+    renderAntiWashes(snap.antiWashes || DEFAULT_ANTIWASHES);
     if (!C.COUPLING_SYSTEMS[get('system').value]) setField('system', DEFAULTS.system);
     renderReagentEqs(snap.reagentEqs);
     setMode(snap.mode === 'mass' ? 'mass' : 'scale', false, false);
@@ -596,6 +597,43 @@
       pct: row.querySelector('[data-k=pct]').value
     }));
   }
+  function antiWashRow(w) {
+    const row = document.createElement('div');
+    row.className = 'cd-row';
+    const mk = (k, ph) => {
+      const i = document.createElement('input');
+      i.type = 'number'; i.min = '0'; i.step = 'any'; i.inputMode = 'decimal';
+      i.dataset.k = k; i.placeholder = ph; i.value = w[k] == null ? '' : w[k];
+      i.addEventListener('input', calculate);
+      return i;
+    };
+    const rm = document.createElement('button');
+    rm.type = 'button'; rm.className = 'no-print'; rm.textContent = '✕';
+    rm.setAttribute('aria-label', t('removeCustom'));
+    rm.addEventListener('click', () => { row.remove(); calculate(); });
+    row.append(mk('pctA', '%'), mk('pctB', '%'), mk('washes', '#'), mk('volumesPerWash', 'vol'), rm);
+    return row;
+  }
+  function renderAntiWashes(list) {
+    const box = get('antiWashes'); box.textContent = '';
+    (list || []).forEach(w => box.appendChild(antiWashRow(w)));
+  }
+  function readAntiWashes() {
+    return [...document.querySelectorAll('#antiWashes .cd-row')].map(row => ({
+      pctA: row.querySelector('[data-k=pctA]').value,
+      pctB: row.querySelector('[data-k=pctB]').value,
+      washes: row.querySelector('[data-k=washes]').value,
+      volumesPerWash: row.querySelector('[data-k=volumesPerWash]').value
+    }));
+  }
+  function antiWashList() {
+    return readAntiWashes().map(w => ({
+      pctA: w.pctA === '' ? 0 : Number(w.pctA),
+      pctB: w.pctB === '' ? 0 : Number(w.pctB),
+      washes: w.washes === '' ? 0 : Number(w.washes),
+      volumesPerWash: w.volumesPerWash === '' ? 0 : Number(w.volumesPerWash)
+    }));
+  }
   function cocktailComponents() {
     const comps = [{ name: 'TFA', pct: readNum('tfaPct'), solid: false }];
     readScavengers().forEach(s => {
@@ -625,7 +663,8 @@
       cocktailVol: readNum('cocktailVol'),
       components: cocktailComponents(),
       tfaWashes: readNum('tfaWashes'), tfaWashVol: readNum('tfaWashVol'),
-      antisolvents: antisolventList(), antisolventVols: readNum('antiVols')
+      antisolvents: antisolventList(), antisolventVols: readNum('antiVols'),
+      antisolventWashes: antiWashList()
     });
     lastCleavage = plan;
     get('cocktailTable').innerHTML = table(
@@ -646,7 +685,19 @@
     plan.antisolvents.forEach(a => rows.push([a.name + ' (' + C.formatNumber(a.pct) + '%)', { text: vol(a.volume), num: true }]));
     rows.push([t('antisolventVolume'), { text: vol(plan.antisolventVolume), num: true }]);
     rows.push([t('precipitationVolume'), { text: vol(plan.precipitationVolume), num: true }]);
+    // antisolvent washes
+    const aw = plan.antisolventWashes;
+    if (aw.total > 0) {
+      Object.keys(aw.byName).forEach(name => { if (aw.byName[name] > 0) rows.push([name + ' (' + t('washesLabel') + ')', { text: vol(aw.byName[name]), num: true }]); });
+      rows.push([t('antiWashVolume'), { text: vol(aw.total), num: true }]);
+    }
+    // neat TFA: cocktail + resin wash
+    rows.push([t('tfaCocktailRow'), { text: vol(plan.tfa.cocktail), num: true }]);
+    rows.push([t('tfaWashRow'), { text: vol(plan.tfa.wash), num: true }]);
+    rows.push([t('tfaTotalRow'), { text: vol(plan.tfa.total), num: true }]);
     get('cdTotals').innerHTML = table([t('thItem'), { text: t('thAmount'), num: true }], rows);
+    // header row for the wash table
+    get('antiWashHead').textContent = t('antiWashCols', { a: aw.nameA, b: aw.nameB });
   }
 
   /* ---------- materials summary ---------- */
@@ -672,6 +723,8 @@
       lastCleavage.components.forEach(c => add(c.name, c.amount, c.unit));
       add('TFA', lastCleavage.tfaWashVolume, 'mL');
       lastCleavage.antisolvents.forEach(a => add(a.name, a.volume, 'mL'));
+      const bw = lastCleavage.antisolventWashes.byName;
+      Object.keys(bw).forEach(name => add(name, bw[name], 'mL'));
     }
     const list = order.map(k => mats[k]).sort((a, b) => a.name.localeCompare(b.name));
     empty.hidden = list.length > 0 || !!(lastPlan && lastPlan.couplings > 0);
@@ -813,6 +866,7 @@
     renderReagentEqs(null);
     renderScavengers(DEFAULT_SCAVENGERS);
     renderAntisolvents(DEFAULT_ANTISOLVENTS);
+    renderAntiWashes(DEFAULT_ANTIWASHES);
   }
   function reset() {
     applyDefaults();
@@ -824,7 +878,6 @@
   renderResinOptions();
   renderSystemOptions();
   renderPads();
-  for (let i = 0; i <= 6; i++) get('tfaWashes').add(new Option(String(i), String(i)));
   applyDefaults();
   MB_FIELDS.concat(SEQ_FIELDS, PLAN_FIELDS, CD_FIELDS).forEach(id => get(id).addEventListener('input', calculate));
   ['nTerm', 'cTerm', 'nFmoc', 'skipFirst', 'swellTimes', 'swellVol', 'washesDeprot', 'washesCouple', 'coupleVol', 'deprotVol', 'washDeprotVol', 'washCoupleVol', 'tfaWashes'].forEach(id => get(id).addEventListener('change', calculate));
@@ -845,6 +898,11 @@
   get('addCustom').addEventListener('click', () => {
     const row = customRow({});
     get('customList').appendChild(row);
+    row.querySelector('input').focus();
+  });
+  get('addAntiWash').addEventListener('click', () => {
+    const row = antiWashRow({ pctA: '70', pctB: '30', washes: '4', volumesPerWash: '4' });
+    get('antiWashes').appendChild(row);
     row.querySelector('input').focus();
   });
   get('reset').addEventListener('click', reset);

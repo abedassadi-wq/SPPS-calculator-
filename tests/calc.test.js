@@ -274,3 +274,25 @@ test('price parsing and material cost', () => {
   assert.equal(C.normalizeMaterial('Piperidine (neat)'), 'piperidine');
   assert.equal(C.densityOf('H₂O'), 1.0);
 });
+
+test('antisolvent washes and total TFA', () => {
+  const p = C.cleavagePlan({
+    peptideResin: 100, cocktailVol: 7,
+    components: [{ name: 'TFA', pct: 95, solid: false }],
+    tfaWashes: 2, tfaWashVol: 1.5,
+    antisolvents: [{ name: 'MTBE', pct: 70 }, { name: 'Heptane', pct: 30 }], antisolventVols: 3,
+    antisolventWashes: [{ pctA: 70, pctB: 30, washes: 4, volumesPerWash: 4 }]
+  });
+  // total TFA = cocktail (95% of 700) + resin wash (2×1.5×100)
+  close(p.tfa.cocktail, 665);
+  close(p.tfa.wash, 300);
+  close(p.tfa.total, 965);
+  // wash: 100 g → 1 vol = 100 mL; 4 washes × 4 vol = 1600 mL
+  close(p.antisolventWashes.total, 1600);
+  close(p.antisolventWashes.byName.MTBE, 1120);
+  close(p.antisolventWashes.byName.Heptane, 480);
+  assert.equal(p.antisolventWashes.rows.length, 1);
+  // no wash rows → zero total
+  const p2 = C.cleavagePlan({ peptideResin: 100, cocktailVol: 7, components: [{ name: 'TFA', pct: 95 }], tfaWashes: 2, tfaWashVol: 1.5, antisolvents: [], antisolventVols: 3 });
+  close(p2.antisolventWashes.total, 0);
+});
