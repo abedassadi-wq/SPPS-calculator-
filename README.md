@@ -10,7 +10,7 @@ Offline web app (PWA) for solid-phase peptide synthesis planning. No account, no
 4. **Cleavage & deprotection (C&D)**: a cleavage cocktail (volumes per g peptide–resin; TFA plus up to five scavengers, each a percent — liquids give mL, solids give grams), a TFA resin wash, the combined peptide–cocktail volume, and antisolvent precipitation (two antisolvents by percent, as a multiple of the peptide–cocktail volume) giving each antisolvent amount and the total precipitation volume.
 5. **Materials summary**: one table of every material used across the whole process — amino acids, reagents, solvents, cocktail components, antisolvents — each aggregated by name. Amounts above 1000 mL or 1000 g are shown in L or kg (2 decimals). Upload a price CSV (material, cas, price, price_unit of kg/g/L/mL, optional density/currency) to cost the run: each material shows its unit price and cost, with a **Total cost** and **RMC** = total cost ÷ grams of final peptide. Liquids can be priced per litre directly, or per kg using a density. A ready template (`prices-template.csv`) lists every material with its CAS.
 
-Projects can be saved in the browser (localStorage). The last inputs are restored automatically. Results can be copied or printed to PDF.
+Projects can be saved in the browser (localStorage), or exported to a `.json` file and re-loaded later (backup / move between devices). The last inputs are restored automatically. Results can be copied or printed to PDF.
 
 ## Formulas
 

@@ -140,6 +140,62 @@
     applyProject();
   }
 
+  /* ---------- project file (export / import) ---------- */
+  function currentProjectName() {
+    const key = get('project').value;
+    return key.startsWith('saved:') ? key.slice(6) : (get('project').selectedOptions[0] || {}).text || 'project';
+  }
+  function downloadFile(filename, text, mime) {
+    try {
+      const blob = new Blob([text], { type: mime || 'application/octet-stream' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = filename;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (e) {
+      window.prompt(t('copyPrompt'), text);
+    }
+  }
+  function exportProject() {
+    const name = currentProjectName();
+    const data = {
+      app: 'SPPS Resin Calculator', type: 'spps-project', version: C.APP_VERSION,
+      exported: new Date().toISOString(), name,
+      state: snapshot(), prices: load(STORE_PRICES, null) || undefined
+    };
+    const safe = name.replace(/[^\w.-]+/g, '_').slice(0, 40) || 'project';
+    const stamp = new Date().toISOString().slice(0, 10);
+    downloadFile('SPPS-' + safe + '-' + stamp + '.json', JSON.stringify(data, null, 2), 'application/json');
+  }
+  function onProjectFile(ev) {
+    const file = ev.target.files && ev.target.files[0];
+    if (!file) return;
+    const status = get('projectFileStatus');
+    const reader = new FileReader();
+    reader.onload = () => {
+      let data;
+      try { data = JSON.parse(String(reader.result || '')); } catch (e) { data = null; }
+      if (!data || data.type !== 'spps-project' || !data.state) {
+        status.style.color = '#a42121';
+        status.textContent = t('projectFileBad');
+        ev.target.value = '';
+        return;
+      }
+      applySnapshot(data.state);
+      if (data.prices) { store(STORE_PRICES, data.prices); applyPrices(data.prices); }
+      // Keep the loaded values as the active selection without overwriting a preset.
+      renderProjectOptions(data.state.project && savedProjects()[String(data.state.project).replace(/^saved:/, '')] ? data.state.project : 'custom');
+      updateProjectInfo();
+      updateCorrectionInfo();
+      status.style.color = '';
+      status.textContent = t('projectFileLoaded', { name: data.name || 'project' });
+      calculate();
+    };
+    reader.readAsText(file);
+    ev.target.value = '';
+  }
+
   /* ---------- state snapshot ---------- */
   function snapshot() {
     const snap = { mode, reagentEqs: currentReagentEqs(), customResidues: readCustom(), scavengers: readScavengers(), antisolvents: readAntisolvents() };
@@ -772,6 +828,9 @@
   get('modeScale').addEventListener('click', () => setMode('scale'));
   get('modeMass').addEventListener('click', () => setMode('mass'));
   get('saveProject').addEventListener('click', saveProject);
+  get('exportProject').addEventListener('click', exportProject);
+  get('importProject').addEventListener('click', () => get('projectFile').click());
+  get('projectFile').addEventListener('change', onProjectFile);
   get('deleteProject').addEventListener('click', deleteProject);
   get('applySeq').addEventListener('click', applySequenceMW);
   ['click', 'keyup', 'select'].forEach(ev => get('sequence').addEventListener(ev, () => { seqCursorTouched = true; }));

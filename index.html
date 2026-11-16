@@ -39,6 +39,12 @@
       <button type="button" id="saveProject" data-i18n="saveProject">Save as project…</button>
       <button type="button" id="deleteProject" class="danger" data-i18n="deleteProject" hidden>Delete project</button>
     </div>
+    <div class="actions no-print">
+      <button type="button" id="exportProject" data-i18n="exportProject">Download project file</button>
+      <button type="button" id="importProject" data-i18n="importProject">Load project file</button>
+    </div>
+    <input type="file" id="projectFile" accept=".json,application/json" hidden>
+    <p class="hint" id="projectFileStatus"></p>
   </section>
 
   <section class="card">
