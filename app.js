@@ -72,7 +72,13 @@
   function readNum(id) { const raw = String(get(id).value).trim(); return raw === '' ? NaN : Number(raw); }
   function getField(id) { const el = get(id); return el.type === 'checkbox' ? el.checked : el.value; }
   function setField(id, value) { const el = get(id); if (el.type === 'checkbox') el.checked = !!value; else el.value = value; }
-  function fmt(x, unit) { return Number.isFinite(x) ? C.formatNumber(x) + (unit ? ' ' + unit : '') : '—'; }
+  function fmt(x, unit) {
+    if (!Number.isFinite(x)) return '—';
+    // Above 1000 g / 1000 mL, show kg / L with two decimals.
+    if (unit === 'g' && Math.abs(x) >= 1000) return C.formatNumber(x / 1000, 2) + ' kg';
+    if (unit === 'mL' && Math.abs(x) >= 1000) return C.formatNumber(x / 1000, 2) + ' L';
+    return C.formatNumber(x) + (unit ? ' ' + unit : '');
+  }
   function esc(s) { return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
   function showError(id, messages) {
     const el = get(id);
@@ -364,8 +370,8 @@
   }
   const n = (x, d) => ({ text: Number.isFinite(x) ? C.formatNumber(x, d) : '—', num: true });
   const eq = x => ({ text: Number.isFinite(x) ? String(+x.toFixed(3)) : '—', num: true });
-  // Large volumes read better in litres.
-  const vol = mL => Math.abs(mL) >= 1000 ? fmt(mL / 1000, 'L') : fmt(mL, 'mL');
+  // Volumes: fmt converts mL >= 1000 to L (2 decimals).
+  const vol = mL => fmt(mL, 'mL');
   // Total used: switch to kg / L above 1000 g / 1000 mL, always 2 decimals.
   const amount = (value, unit) => {
     if (!Number.isFinite(value)) return '—';
