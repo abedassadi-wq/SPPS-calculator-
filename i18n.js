@@ -181,6 +181,8 @@
       uploadPrices: 'Upload prices (CSV)',
       clearPrices: 'Clear prices',
       pricesLoaded: 'Prices loaded ({n} materials). Price can be per kg, g, L or mL (price_unit column); matched by material name.',
+      pricesNoneParsed: 'No prices were read from the file. Check it has a header row (material, price, price_unit) and a price in each row.',
+      pricesNotCsv: 'That looks like an Excel (.xlsx) file. Please save it as CSV (File → Save As → CSV) and upload the .csv.',
       thPrice: 'Unit price',
       thCost: 'Cost',
       totalRMC: 'Total cost (all materials)',

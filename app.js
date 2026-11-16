@@ -647,11 +647,23 @@
   }
 
   /* ---------- prices ---------- */
+  function looksBinary(text) {
+    // xlsx/zip files start with "PK"; also treat many NUL/replacement chars as binary.
+    if (text.charCodeAt(0) === 0x50 && text.charCodeAt(1) === 0x4b) return true;
+    const sample = text.slice(0, 2000);
+    let bad = 0;
+    for (let i = 0; i < sample.length; i++) { const c = sample.charCodeAt(i); if (c === 0 || c === 0xfffd) bad++; }
+    return bad > 8;
+  }
   function applyPrices(text) {
     prices = text ? C.parsePrices(text) : null;
-    get('priceStatus').textContent = prices ? t('pricesLoaded', { n: String(prices.entries.length) }) : '';
-    get('clearPrices').hidden = !prices;
-    get('rmcNote').hidden = !prices;
+    const el = get('priceStatus');
+    if (!prices) { el.textContent = ''; el.style.color = ''; get('clearPrices').hidden = true; get('rmcNote').hidden = true; return; }
+    const priced = prices.entries.filter(e => e.price > 0).length;
+    el.style.color = priced ? '' : '#a42121';
+    el.textContent = priced ? t('pricesLoaded', { n: String(priced) }) : t('pricesNoneParsed');
+    get('clearPrices').hidden = false;
+    get('rmcNote').hidden = !priced;
   }
   function loadPricesFromStore() {
     const text = load(STORE_PRICES, null);
@@ -660,9 +672,20 @@
   function onPriceFile(ev) {
     const file = ev.target.files && ev.target.files[0];
     if (!file) return;
+    const name = (file.name || '').toLowerCase();
     const reader = new FileReader();
     reader.onload = () => {
       const text = String(reader.result || '');
+      if (name.endsWith('.xlsx') || name.endsWith('.xls') || looksBinary(text)) {
+        prices = null;
+        try { localStorage.removeItem(STORE_PRICES); } catch (e) {}
+        get('clearPrices').hidden = true;
+        get('rmcNote').hidden = true;
+        get('priceStatus').style.color = '#a42121';
+        get('priceStatus').textContent = t('pricesNotCsv');
+        calculate();
+        return;
+      }
       store(STORE_PRICES, text);
       applyPrices(text);
       calculate();
