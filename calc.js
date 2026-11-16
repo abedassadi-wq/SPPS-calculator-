@@ -9,7 +9,7 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
 
-  const APP_VERSION = '9.7';
+  const APP_VERSION = '9.8';
 
   // Average masses (g/mol)
   const H2O = 18.0153;
@@ -351,10 +351,32 @@
     const antiPctSum = anti.reduce((s, a) => s + a.pct, 0);
     const precipitationVolume = peptideCocktailVolume + antisolventVolume;
 
+    // Antisolvent washes of the precipitate. One volume = the peptide-resin mass in mL
+    // (e.g. 100 g precipitated → 1 volume = 100 mL). Each row: a two-antisolvent blend
+    // (names A,B), a number of washes and the volume per wash (× peptide-resin).
+    const nameA = (o.antisolvents && o.antisolvents[0] && o.antisolvents[0].name) || 'Antisolvent A';
+    const nameB = (o.antisolvents && o.antisolvents[1] && o.antisolvents[1].name) || 'Antisolvent B';
+    const washByName = {};
+    const washRows = (o.antisolventWashes || []).filter(w => w.washes > 0 && w.volumesPerWash > 0 && (w.pctA > 0 || w.pctB > 0)).map(w => {
+      const volume = pr * w.volumesPerWash * w.washes;
+      const a = volume * (w.pctA || 0) / 100;
+      const b = volume * (w.pctB || 0) / 100;
+      washByName[nameA] = (washByName[nameA] || 0) + a;
+      washByName[nameB] = (washByName[nameB] || 0) + b;
+      return { pctA: w.pctA || 0, pctB: w.pctB || 0, washes: w.washes, volumesPerWash: w.volumesPerWash, volume, a, b };
+    });
+    const antisolventWashVolume = washRows.reduce((s, w) => s + w.volume, 0);
+    const antisolventWashes = { nameA, nameB, rows: washRows, byName: washByName, total: antisolventWashVolume };
+
+    // Neat TFA needed: the TFA in the cleavage cocktail plus the TFA resin wash.
+    const tfaCocktail = components.filter(c => /^tfa$/i.test(c.name)).reduce((s, c) => s + c.amount, 0);
+    const tfa = { cocktail: tfaCocktail, wash: tfaWashVolume, total: tfaCocktail + tfaWashVolume };
+
     return {
       cocktailVolume, components, pctSum,
       tfaWashVolume, peptideCocktailVolume,
-      antisolventVolume, antisolvents, antiPctSum, precipitationVolume
+      antisolventVolume, antisolvents, antiPctSum, precipitationVolume,
+      antisolventWashes, tfa
     };
   }
 

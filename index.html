@@ -18,6 +18,10 @@
 </head>
 <body>
 <main class="wrap">
+  <datalist id="volDL"><option value="4"></option><option value="5"></option><option value="6"></option><option value="7"></option><option value="8"></option><option value="9"></option><option value="10"></option></datalist>
+  <datalist id="washDL"><option value="0"></option><option value="1"></option><option value="2"></option><option value="3"></option><option value="4"></option><option value="5"></option><option value="6"></option><option value="7"></option><option value="8"></option><option value="9"></option><option value="10"></option><option value="12"></option><option value="15"></option></datalist>
+  <datalist id="swellDL"><option value="0"></option><option value="1"></option><option value="2"></option><option value="3"></option><option value="4"></option><option value="5"></option></datalist>
+  <datalist id="tfaWashDL"><option value="0"></option><option value="1"></option><option value="2"></option><option value="3"></option><option value="4"></option><option value="5"></option><option value="6"></option></datalist>
   <header class="top">
     <div>
       <div class="kicker" data-i18n="kicker">PEPTIDE PROCESS ENGINEERING</div>
@@ -203,18 +207,18 @@
         <div class="step-title" data-i18n="stepSwell">Resin swelling (synthesis start)</div>
         <div class="field">
           <label for="swellTimes" data-i18n="swellTimes">Number of swells</label>
-          <select id="swellTimes"><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3" selected>3</option><option value="4">4</option><option value="5">5</option></select>
+          <input id="swellTimes" type="number" inputmode="decimal" min="0" step="any" list="swellDL" value="3">
         </div>
         <div class="field">
           <label for="swellVol" data-i18n="mlPerG">DMF (mL/g resin)</label>
-          <select id="swellVol"><option value="4">4</option><option value="5">5</option><option value="6" selected>6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option></select>
+          <input id="swellVol" type="number" inputmode="decimal" min="0" step="any" list="volDL" value="6">
         </div>
       </div>
       <div class="step">
         <div class="step-title" data-i18n="stepCouple">Coupling</div>
         <div class="field">
           <label for="coupleVol" data-i18n="mlPerG">DMF (mL/g resin)</label>
-          <select id="coupleVol"><option value="4">4</option><option value="5">5</option><option value="6" selected>6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option></select>
+          <input id="coupleVol" type="number" inputmode="decimal" min="0" step="any" list="volDL" value="6">
         </div>
       </div>
       <div class="step">
@@ -225,29 +229,29 @@
         </div>
         <div class="field">
           <label for="deprotVol" data-i18n="mlPerGPip">20% piperidine/DMF (mL/g resin)</label>
-          <select id="deprotVol"><option value="4">4</option><option value="5">5</option><option value="6" selected>6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option></select>
+          <input id="deprotVol" type="number" inputmode="decimal" min="0" step="any" list="volDL" value="6">
         </div>
       </div>
       <div class="step">
         <div class="step-title" data-i18n="stepWashDeprot">Washes after Fmoc removal</div>
         <div class="field">
           <label for="washesDeprot" data-i18n="washCount">Number of washes</label>
-          <select id="washesDeprot"><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5" selected>5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option><option value="11">11</option><option value="12">12</option><option value="13">13</option><option value="14">14</option><option value="15">15</option></select>
+          <input id="washesDeprot" type="number" inputmode="decimal" min="0" step="any" list="washDL" value="5">
         </div>
         <div class="field">
           <label for="washDeprotVol" data-i18n="mlPerG">DMF (mL/g resin)</label>
-          <select id="washDeprotVol"><option value="4">4</option><option value="5">5</option><option value="6" selected>6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option></select>
+          <input id="washDeprotVol" type="number" inputmode="decimal" min="0" step="any" list="volDL" value="6">
         </div>
       </div>
       <div class="step">
         <div class="step-title" data-i18n="stepWashCouple">Washes after coupling</div>
         <div class="field">
           <label for="washesCouple" data-i18n="washCount">Number of washes</label>
-          <select id="washesCouple"><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5" selected>5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option><option value="11">11</option><option value="12">12</option><option value="13">13</option><option value="14">14</option><option value="15">15</option></select>
+          <input id="washesCouple" type="number" inputmode="decimal" min="0" step="any" list="washDL" value="5">
         </div>
         <div class="field">
           <label for="washCoupleVol" data-i18n="mlPerG">DMF (mL/g resin)</label>
-          <select id="washCoupleVol"><option value="4">4</option><option value="5">5</option><option value="6" selected>6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option></select>
+          <input id="washCoupleVol" type="number" inputmode="decimal" min="0" step="any" list="volDL" value="6">
         </div>
       </div>
     </div>
@@ -296,7 +300,7 @@
         <div class="step-title" data-i18n="tfaWashStep">TFA wash</div>
         <div class="field">
           <label for="tfaWashes" data-i18n="washCount">Number of washes</label>
-          <select id="tfaWashes"></select>
+          <input id="tfaWashes" type="number" inputmode="numeric" min="0" step="1" list="tfaWashDL" value="2">
         </div>
         <div class="field">
           <label for="tfaWashVol" data-i18n="mlPerGpr">Volume (mL per g peptide–resin)</label>
@@ -314,6 +318,14 @@
     </div>
     <div id="antisolvents" class="steps"></div>
     <p class="hint" id="antiSum"></p>
+
+    <h3 data-i18n="antiWashTitle">Antisolvent washes (after precipitation)</h3>
+    <p class="hint" data-i18n="antiWashHint">One volume = the peptide–resin mass in mL (e.g. 100 g → 100 mL). Each row: the blend of the two antisolvents above, the number of washes, and the volume per wash.</p>
+    <div id="antiWashHead" class="cd-wash-head"></div>
+    <div id="antiWashes" class="cd-list"></div>
+    <div class="actions no-print">
+      <button type="button" id="addAntiWash" data-i18n="addAntiWash">Add wash row</button>
+    </div>
 
     <h3 data-i18n="cdTotalsTitle">C&amp;D totals</h3>
     <div class="table-wrap"><table id="cdTotals"></table></div>
