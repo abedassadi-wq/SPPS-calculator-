@@ -9,7 +9,7 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
 
-  const APP_VERSION = '10.0';
+  const APP_VERSION = '10.1';
 
   // Average masses (g/mol)
   const H2O = 18.0153;
@@ -293,6 +293,17 @@
     const washCoupleDMF = o.resinMass * o.washCoupleVol * o.washesCouple * couplings;
     const washDeprotDMF = o.resinMass * o.washDeprotVol * o.washesDeprot * deprotCycles;
     const washDMF = washCoupleDMF + washDeprotDMF;
+
+    // Final washes of the resin, one or more rows, each with its own solvent, number of washes
+    // and volume per wash (× resin mass). Aggregated per solvent.
+    const fwByName = {};
+    const fwRows = (o.finalWashes || []).filter(w => w.solvent && w.washes > 0 && w.vol > 0).map(w => {
+      const volume = o.resinMass * w.vol * w.washes;
+      fwByName[w.solvent] = (fwByName[w.solvent] || 0) + volume;
+      return { solvent: w.solvent, washes: w.washes, vol: w.vol, volume };
+    });
+    const finalWashes = { rows: fwRows, byName: fwByName, total: fwRows.reduce((s, w) => s + w.volume, 0) };
+
     return {
       nRes,
       couplings,
@@ -309,6 +320,7 @@
       washCoupleDMF,
       washDeprotDMF,
       washDMF,
+      finalWashes,
       totalDMF: swellDMF + coupleDMF + washDMF + piperidineSolution * 0.8
     };
   }
@@ -430,8 +442,10 @@
     'tis': 0.773, 'dms': 0.846, 'h2o': 1.0, 'h₂o': 1.0, 'water': 1.0,
     'thioanisole': 1.058, 'edt': 1.123,
     'mtbe': 0.740, 'cold mtbe': 0.740, 'heptane': 0.684, 'diethyl ether': 0.713, 'hexane': 0.659, 'petroleum ether': 0.64,
-    'acetic anhydride': 1.080, 'acetonitrile': 0.786, 'acn': 0.786, 'ethanol': 0.789, 'methanol': 0.792, 'acetic acid': 1.049
+    'acetic anhydride': 1.080, 'acetonitrile': 0.786, 'acn': 0.786, 'ethanol': 0.789, 'methanol': 0.792, 'acetic acid': 1.049,
+    'ipa': 0.786, 'isopropanol': 0.786, '2-propanol': 0.786
   };
+  const FINAL_WASH_SOLVENTS = ['DMF', 'Methanol', 'Ethanol', 'IPA', 'MTBE'];
   const CYCLIZATION_SOLVENTS = ['Water', 'Acetonitrile', 'Ethanol', 'Methanol', 'Acetic acid'];
 
   // Normalise a material name for matching: lowercase, drop a trailing "(...)" tag, collapse spaces.
@@ -535,7 +549,7 @@
     APP_VERSION, RESINS, RESIDUES, NONSTD, PG, REAGENTS, COUPLING_SYSTEMS, SCAVENGERS, ANTISOLVENTS, DENSITY,
     constants: { H2O, NH3, HCL, FMOC, ACETYL },
     massBalance, formatNumber, decimalsFor, customIndex, parseSequence, sequenceMW, buildingBlock, reagentAmount, couplingPlan, cleavagePlan,
-    acetylationPlan, cyclizationPlan, purificationPlan, CYCLIZATION_SOLVENTS,
+    acetylationPlan, cyclizationPlan, purificationPlan, CYCLIZATION_SOLVENTS, FINAL_WASH_SOLVENTS,
     normalizeMaterial, normalizePriceUnit, densityOf, parsePrices, materialCost
   };
 });

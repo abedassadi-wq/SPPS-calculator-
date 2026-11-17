@@ -97,6 +97,8 @@ button:disabled { opacity: .45; cursor: not-allowed; }
 .cd-list { display: grid; gap: 8px; }
 .cd-row input[data-k="pctA"], .cd-row input[data-k="pctB"], .cd-row input[data-k="washes"], .cd-row input[data-k="volumesPerWash"] { width: 68px; flex: 0 0 68px; }
 .cd-wash-head { display: flex; gap: 8px; }
+.cd-wash-head span.wide { flex: 1; min-width: 130px; }
+.cd-row input[data-k="fwWashes"], .cd-row input[data-k="fwVol"] { width: 68px; flex: 0 0 68px; }
 .cd-wash-head span { flex: 0 0 68px; width: 68px; font-size: 11px; font-weight: 700; color: #526277; text-align: center; line-height: 1.25; }
 .cd-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .cd-row select { flex: 1; min-width: 130px; padding: 10px; }

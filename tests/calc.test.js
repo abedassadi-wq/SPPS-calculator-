@@ -323,3 +323,18 @@ test('purification plan (acetonitrile per g)', () => {
   const p = C.purificationPlan({ theoretical: 7000, acnPerG: 0.5 });
   close(p.acnVolume, 3500000);               // 7000 g × 0.5 L/g = 3500 L
 });
+
+test('final washes (resin, per solvent)', () => {
+  const p = C.couplingPlan({
+    scale: 100, resinMass: 125, residues: C.parseSequence('AGK').residues, aaEq: 3, reagents: [['DIC', 3]],
+    finalWashes: [{ solvent: 'Methanol', washes: 3, vol: 5 }, { solvent: 'MTBE', washes: 2, vol: 5 }, { solvent: 'Methanol', washes: 1, vol: 5 }]
+  });
+  // Methanol: (3+1) washes × 5 mL/g × 125 g = 2500; MTBE: 2 × 5 × 125 = 1250
+  close(p.finalWashes.byName.Methanol, 2500);
+  close(p.finalWashes.byName.MTBE, 1250);
+  close(p.finalWashes.total, 3750);
+  assert.deepEqual(C.FINAL_WASH_SOLVENTS, ['DMF', 'Methanol', 'Ethanol', 'IPA', 'MTBE']);
+  // rows with no solvent or zero counts are ignored
+  const p2 = C.couplingPlan({ scale: 100, resinMass: 125, residues: [], aaEq: 3, reagents: [], finalWashes: [{ solvent: '', washes: 3, vol: 5 }, { solvent: 'DMF', washes: 0, vol: 5 }] });
+  close(p2.finalWashes.total, 0);
+});

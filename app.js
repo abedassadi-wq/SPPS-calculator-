@@ -42,6 +42,9 @@
   const DEFAULT_ANTIWASHES = [
     { pctA: '70', pctB: '30', washes: '4', volumesPerWash: '4' }
   ];
+  const DEFAULT_FINAL_WASHES = [
+    { solvent: 'Methanol', washes: '3', vol: '5' }
+  ];
   const MB_FIELDS = ['loading', 'protectedMW', 'freeMW', 'correction', 'yieldPct', 'scale', 'mass'];
   const SEQ_FIELDS = ['sequence', 'nTerm', 'cTerm', 'nFmoc'];
   const PLAN_FIELDS = ['aaEq', 'numResidues', 'skipFirst', 'swellTimes', 'swellVol', 'coupleVol', 'deprotVol', 'deprots', 'washesCouple', 'washCoupleVol', 'washesDeprot', 'washDeprotVol'];
@@ -217,7 +220,7 @@
 
   /* ---------- state snapshot ---------- */
   function snapshot() {
-    const snap = { mode, reagentEqs: currentReagentEqs(), customResidues: readCustom(), scavengers: readScavengers(), antisolvents: readAntisolvents(), antiWashes: readAntiWashes(), cycSolvents: readCycSolvents() };
+    const snap = { mode, reagentEqs: currentReagentEqs(), customResidues: readCustom(), scavengers: readScavengers(), antisolvents: readAntisolvents(), antiWashes: readAntiWashes(), cycSolvents: readCycSolvents(), finalWashes: readFinalWashes() };
     STATE_FIELDS.forEach(id => { snap[id] = getField(id); });
     return snap;
   }
@@ -233,6 +236,7 @@
     renderAntisolvents(snap.antisolvents || DEFAULT_ANTISOLVENTS);
     renderCycSolvents(snap.cycSolvents || DEFAULT_CYC_SOLVENTS);
     renderAntiWashes(snap.antiWashes || DEFAULT_ANTIWASHES);
+    renderFinalWashes(snap.finalWashes || DEFAULT_FINAL_WASHES);
     if (!C.COUPLING_SYSTEMS[get('system').value]) setField('system', DEFAULTS.system);
     renderReagentEqs(snap.reagentEqs);
     setMode(snap.mode === 'mass' ? 'mass' : 'scale', false, false);
@@ -415,9 +419,11 @@
       scale: last.scale, resinMass: last.mass, residues: seqResidues, residueCount, aaEq, reagents,
       skipFirst: get('skipFirst').checked,
       swellVol: nums[0], swellTimes: nums[1], coupleVol: nums[2], deprotVol: nums[3], deprots: nums[4],
-      washesCouple: nums[5], washCoupleVol: nums[6], washesDeprot: nums[7], washDeprotVol: nums[8]
+      washesCouple: nums[5], washCoupleVol: nums[6], washesDeprot: nums[7], washDeprotVol: nums[8],
+      finalWashes: finalWashList()
     });
     lastPlan = plan;
+    get('finalWashHead').innerHTML = ['<span class="wide">' + esc(t('fwSolvent')) + '</span>', '<span>' + esc(t('awWashes')) + '</span>', '<span>' + esc(t('fwVolCol')) + '</span>'].join('');
 
     const aaMmol = last.scale * aaEq;
     get('perCouplingTable').innerHTML = table(
@@ -445,6 +451,7 @@
       rows.push([t('totalSwell'), { text: vol(plan.swellDMF), num: true }]);
       rows.push([t('totalCouple'), { text: vol(plan.coupleDMF), num: true }]);
       rows.push([t('totalWashCouple'), { text: vol(plan.washCoupleDMF), num: true }]);
+      Object.keys(plan.finalWashes.byName).forEach(name => { if (plan.finalWashes.byName[name] > 0) rows.push([name + ' (' + t('finalWashLabel') + ')', { text: vol(plan.finalWashes.byName[name]), num: true }]); });
       rows.push([t('totalWashDeprot'), { text: vol(plan.washDeprotDMF), num: true }]);
       rows.push([t('totalPip'), { text: vol(plan.piperidineSolution), num: true }]);
       rows.push([t('totalPipNeat'), { text: vol(plan.piperidine), num: true }]);
@@ -609,6 +616,47 @@
       name: row.querySelector('[data-k=name]').value,
       manual: row.querySelector('[data-k=manual]').value,
       pct: row.querySelector('[data-k=pct]').value
+    }));
+  }
+  function finalWashRow(w) {
+    const row = document.createElement('div');
+    row.className = 'cd-row';
+    const sel = document.createElement('select');
+    sel.dataset.k = 'solvent';
+    sel.add(new Option('—', ''));
+    C.FINAL_WASH_SOLVENTS.forEach(nm => sel.add(new Option(nm, nm)));
+    sel.value = [...sel.options].some(o => o.value === w.solvent) ? w.solvent : '';
+    const mk = (k, ph, val) => {
+      const i = document.createElement('input');
+      i.type = 'number'; i.min = '0'; i.step = 'any'; i.inputMode = 'decimal';
+      i.dataset.k = k; i.placeholder = ph; i.value = val == null ? '' : val;
+      i.addEventListener('input', calculate);
+      return i;
+    };
+    sel.addEventListener('change', calculate);
+    const rm = document.createElement('button');
+    rm.type = 'button'; rm.className = 'no-print'; rm.textContent = '\u2715';
+    rm.setAttribute('aria-label', t('removeCustom'));
+    rm.addEventListener('click', () => { row.remove(); calculate(); });
+    row.append(sel, mk('fwWashes', '#', w.washes), mk('fwVol', 'vol', w.vol), rm);
+    return row;
+  }
+  function renderFinalWashes(list) {
+    const box = get('finalWashes'); box.textContent = '';
+    (list || []).forEach(w => box.appendChild(finalWashRow(w)));
+  }
+  function readFinalWashes() {
+    return [...document.querySelectorAll('#finalWashes .cd-row')].map(row => ({
+      solvent: row.querySelector('[data-k=solvent]').value,
+      washes: row.querySelector('[data-k=fwWashes]').value,
+      vol: row.querySelector('[data-k=fwVol]').value
+    }));
+  }
+  function finalWashList() {
+    return readFinalWashes().map(w => ({
+      solvent: w.solvent,
+      washes: w.washes === '' ? 0 : Number(w.washes),
+      vol: w.vol === '' ? 0 : Number(w.vol)
     }));
   }
   function antiWashRow(w) {
@@ -826,6 +874,7 @@
       lastPlan.reagentTotals.forEach(r => { if (Number.isFinite(r.mL)) add(r.name, r.mL, 'mL'); else add(r.name, r.grams, 'g'); });
       add(t('matDMF'), lastPlan.totalDMF, 'mL');
       add(t('matPiperidine'), lastPlan.piperidine, 'mL');
+      Object.keys(lastPlan.finalWashes.byName).forEach(name => add(name, lastPlan.finalWashes.byName[name], 'mL'));
     }
     if (lastCleavage) {
       lastCleavage.components.forEach(c => add(c.name, c.amount, c.unit));
@@ -988,6 +1037,7 @@
     renderAntisolvents(DEFAULT_ANTISOLVENTS);
     renderCycSolvents(DEFAULT_CYC_SOLVENTS);
     renderAntiWashes(DEFAULT_ANTIWASHES);
+    renderFinalWashes(DEFAULT_FINAL_WASHES);
   }
   function reset() {
     applyDefaults();
@@ -1029,6 +1079,11 @@
   get('addCycSolvent').addEventListener('click', () => {
     const row = cycSolventRow({});
     get('cycSolvents').appendChild(row);
+    row.querySelector('select').focus();
+  });
+  get('addFinalWash').addEventListener('click', () => {
+    const row = finalWashRow({ solvent: 'DMF', washes: '3', vol: '5' });
+    get('finalWashes').appendChild(row);
     row.querySelector('select').focus();
   });
   get('reset').addEventListener('click', reset);
