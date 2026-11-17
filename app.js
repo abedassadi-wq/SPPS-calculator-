@@ -907,24 +907,27 @@
     }
     const unitLabel = { kg: 'kg', g: 'g', L: 'L', mL: 'mL' };
     let totalCost = 0, missing = 0, priced = 0;
-    const rows = list.map(m => {
+    const costed = list.map(m => {
       const c = C.materialCost(m, prices);
+      if (c && Number.isFinite(c.cost)) { totalCost += c.cost; priced++; } else missing++;
+      return { m, c };
+    });
+    const rows = costed.map(({ m, c }) => {
       if (c && Number.isFinite(c.cost)) {
-        totalCost += c.cost; priced++;
         const priceText = cur + C.formatNumber(c.price, 2) + ' /' + (unitLabel[c.priceUnit] || c.priceUnit);
-        return [m.name, { text: amount(m.value, m.unit), num: true }, { text: priceText, num: true }, { text: cur + C.formatNumber(c.cost, 2), num: true }];
+        const pct = totalCost > 0 ? C.formatNumber(c.cost / totalCost * 100, 1) + '%' : '—';
+        return [m.name, { text: amount(m.value, m.unit), num: true }, { text: priceText, num: true }, { text: cur + C.formatNumber(c.cost, 2), num: true }, { text: pct, num: true }];
       }
-      missing++;
       const why = c && c.needsDensity ? t('needDensity') : '—';
-      return [m.name, { text: amount(m.value, m.unit), num: true }, { text: why, num: true }, { text: '—', num: true }];
+      return [m.name, { text: amount(m.value, m.unit), num: true }, { text: why, num: true }, { text: '—', num: true }, { text: '—', num: true }];
     });
     const rmc = Number.isFinite(last.final) && last.final > 0 ? totalCost / last.final : NaN;
     const foot = [
-      [t('totalRMC'), '', '', { text: cur + C.formatNumber(totalCost, 2), num: true }],
-      [t('rmcPerG'), '', '', { text: Number.isFinite(rmc) ? cur + C.formatNumber(rmc, 2) + ' /g' : '—', num: true }]
+      [t('totalRMC'), '', '', { text: cur + C.formatNumber(totalCost, 2), num: true }, { text: '100%', num: true }],
+      [t('rmcPerG'), '', '', { text: Number.isFinite(rmc) ? cur + C.formatNumber(rmc, 2) + ' /g' : '—', num: true }, '']
     ];
     tbl.innerHTML = table(
-      [t('thMaterial'), { text: t('thTotalUsed'), num: true }, { text: t('thPrice'), num: true }, { text: t('thCost'), num: true }],
+      [t('thMaterial'), { text: t('thTotalUsed'), num: true }, { text: t('thPrice'), num: true }, { text: t('thCost'), num: true }, { text: t('thCostPct'), num: true }],
       rows, foot);
     get('rmcNote').textContent = t('rmcNote', { priced: String(priced), missing: String(missing) });
     get('rmcNote').hidden = false;

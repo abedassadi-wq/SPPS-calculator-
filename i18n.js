@@ -226,6 +226,7 @@
       pricesNotCsv: 'That looks like an Excel (.xlsx) file. Please save it as CSV (File → Save As → CSV) and upload the .csv.',
       thPrice: 'Unit price',
       thCost: 'Cost',
+      thCostPct: '% of cost',
       totalRMC: 'Total cost (all materials)',
       rmcPerG: 'RMC (cost per g final peptide)',
       needDensity: 'need density',
