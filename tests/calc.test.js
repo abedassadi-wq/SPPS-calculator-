@@ -296,3 +296,30 @@ test('antisolvent washes and total TFA', () => {
   const p2 = C.cleavagePlan({ peptideResin: 100, cocktailVol: 7, components: [{ name: 'TFA', pct: 95 }], tfaWashes: 2, tfaWashVol: 1.5, antisolvents: [], antisolventVols: 3 });
   close(p2.antisolventWashes.total, 0);
 });
+
+test('acetylation plan', () => {
+  const a = C.acetylationPlan({ scale: 100, resinMass: 125, ac2oEq: 5, collidineEq: 5, steps: 5, dmfVol: 6 });
+  close(a.ac2o.mmol, 100 * 5 * 5);           // scale × eq × steps
+  close(a.ac2o.grams, 2500 * 102.09 / 1000);
+  close(a.ac2o.mL, a.ac2o.grams / 1.080);
+  close(a.collidine.grams, 2500 * 121.18 / 1000);
+  close(a.dmf, 125 * 6 * 5);                  // resin × vol × steps
+});
+
+test('cyclization plan (iodine after assay)', () => {
+  const c = C.cyclizationPlan({
+    scale: 100, theoretical: 7000, assay: 50, concentration: 100, iodineEq: 1,
+    solvents: [{ name: 'Water', pct: 50 }, { name: 'Acetonitrile', pct: 50 }]
+  });
+  close(c.effectivePeptide, 3500);           // 7 kg × 50%
+  close(c.totalVolume, 35000);               // 3500 g ÷ 100 g/L → 35 L
+  close(c.iodine.mmol, 50);                   // 1 eq × (100 mmol × 50%)
+  close(c.iodine.grams, 50 * 253.808 / 1000);
+  close(c.solvents[0].volume, 17500);
+  close(c.pctSum, 100);
+});
+
+test('purification plan (acetonitrile per g)', () => {
+  const p = C.purificationPlan({ theoretical: 7000, acnPerG: 0.5 });
+  close(p.acnVolume, 3500000);               // 7000 g × 0.5 L/g = 3500 L
+});

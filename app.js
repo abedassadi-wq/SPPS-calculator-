@@ -18,8 +18,15 @@
     system: 'dic-oxyma', aaEq: '3', numResidues: '', skipFirst: false,
     swellTimes: '3', swellVol: '6', coupleVol: '6', deprotVol: '6', deprots: '2',
     washesCouple: '5', washCoupleVol: '6', washesDeprot: '5', washDeprotVol: '6',
-    cocktailVol: '7', tfaPct: '95', tfaWashes: '2', tfaWashVol: '1.5', antiVols: '3'
+    cocktailVol: '7', tfaPct: '95', tfaWashes: '2', tfaWashVol: '1.5', antiVols: '3',
+    ac2oEq: '5', collidineEq: '5', acetylSteps: '0', acetylDmfVol: '6',
+    assay: '50', iodineEq: '1', cycConc: '100', acnPerG: '0.5'
   };
+  const ACYC_FIELDS = ['ac2oEq', 'collidineEq', 'acetylSteps', 'acetylDmfVol', 'assay', 'iodineEq', 'cycConc', 'acnPerG'];
+  const DEFAULT_CYC_SOLVENTS = [
+    { name: 'Water', manual: '', pct: '50' },
+    { name: 'Acetonitrile', manual: '', pct: '50' }
+  ];
   const CD_FIELDS = ['cocktailVol', 'tfaPct', 'tfaWashes', 'tfaWashVol', 'antiVols'];
   const DEFAULT_SCAVENGERS = [
     { name: 'TIS', manual: '', pct: '2.5', solid: false },
@@ -38,13 +45,16 @@
   const MB_FIELDS = ['loading', 'protectedMW', 'freeMW', 'correction', 'yieldPct', 'scale', 'mass'];
   const SEQ_FIELDS = ['sequence', 'nTerm', 'cTerm', 'nFmoc'];
   const PLAN_FIELDS = ['aaEq', 'numResidues', 'skipFirst', 'swellTimes', 'swellVol', 'coupleVol', 'deprotVol', 'deprots', 'washesCouple', 'washCoupleVol', 'washesDeprot', 'washDeprotVol'];
-  const STATE_FIELDS = ['resin'].concat(MB_FIELDS, SEQ_FIELDS, ['system'], PLAN_FIELDS, CD_FIELDS);
+  const STATE_FIELDS = ['resin'].concat(MB_FIELDS, SEQ_FIELDS, ['system'], PLAN_FIELDS, CD_FIELDS, ACYC_FIELDS);
 
   let mode = 'scale';
   let last = null;      // last mass-balance result
   let lastSeq = null;   // last sequence MW result
   let lastPlan = null;  // last coupling plan
   let lastCleavage = null; // last C&D plan
+  let lastAcetyl = null;
+  let lastCyc = null;
+  let lastPurif = null;
   let prices = null;       // parsed price list
 
   /* ---------- storage (never required for the page to work) ---------- */
@@ -207,7 +217,7 @@
 
   /* ---------- state snapshot ---------- */
   function snapshot() {
-    const snap = { mode, reagentEqs: currentReagentEqs(), customResidues: readCustom(), scavengers: readScavengers(), antisolvents: readAntisolvents(), antiWashes: readAntiWashes() };
+    const snap = { mode, reagentEqs: currentReagentEqs(), customResidues: readCustom(), scavengers: readScavengers(), antisolvents: readAntisolvents(), antiWashes: readAntiWashes(), cycSolvents: readCycSolvents() };
     STATE_FIELDS.forEach(id => { snap[id] = getField(id); });
     return snap;
   }
@@ -221,6 +231,7 @@
     renderCustom(snap.customResidues || []);
     renderScavengers(snap.scavengers || DEFAULT_SCAVENGERS);
     renderAntisolvents(snap.antisolvents || DEFAULT_ANTISOLVENTS);
+    renderCycSolvents(snap.cycSolvents || DEFAULT_CYC_SOLVENTS);
     renderAntiWashes(snap.antiWashes || DEFAULT_ANTIWASHES);
     if (!C.COUPLING_SYSTEMS[get('system').value]) setField('system', DEFAULTS.system);
     renderReagentEqs(snap.reagentEqs);
@@ -326,6 +337,9 @@
     updateSequence();
     updatePlan();
     updateCleavage();
+    updateAcetylation();
+    updateCyclization();
+    updatePurification();
     updateSummary();
     persist();
   }
@@ -703,6 +717,97 @@
     ].map(x => '<span>' + esc(x) + '</span>').join('') : '';
   }
 
+  /* ---------- acetylation / cyclization / purification ---------- */
+  function updateAcetylation() {
+    const tbl = get('acetylTable');
+    const steps = Math.round(readNum('acetylSteps'));
+    if (!last || !(steps > 0)) { lastAcetyl = null; tbl.innerHTML = ''; return; }
+    const plan = C.acetylationPlan({
+      scale: last.scale, resinMass: last.mass,
+      ac2oEq: readNum('ac2oEq'), collidineEq: readNum('collidineEq'),
+      steps, dmfVol: readNum('acetylDmfVol')
+    });
+    lastAcetyl = plan;
+    const rows = [
+      [plan.ac2o.name, eq(plan.ac2o.eq), n(plan.ac2o.mmol), { text: fmt(plan.ac2o.grams, 'g') + ' / ' + fmt(plan.ac2o.mL, 'mL'), num: true }],
+      [plan.collidine.name, eq(plan.collidine.eq), n(plan.collidine.mmol), { text: fmt(plan.collidine.grams, 'g') + ' / ' + fmt(plan.collidine.mL, 'mL'), num: true }],
+      [t('matDMF2'), { text: '', num: true }, { text: '', num: true }, { text: vol(plan.dmf), num: true }]
+    ];
+    tbl.innerHTML = table([t('thReagent'), { text: t('thEq'), num: true }, { text: t('thMmol'), num: true }, { text: t('thAmount'), num: true }], rows);
+  }
+
+  function cycSolventRow(sv) {
+    const row = document.createElement('div');
+    row.className = 'cd-row';
+    const sel = document.createElement('select');
+    sel.dataset.k = 'name';
+    sel.add(new Option('—', ''));
+    C.CYCLIZATION_SOLVENTS.forEach(nm => sel.add(new Option(nm, nm)));
+    sel.add(new Option(t('other'), '__other'));
+    sel.value = [...sel.options].some(o => o.value === sv.name) ? sv.name : '';
+    const manual = document.createElement('input');
+    manual.dataset.k = 'manual'; manual.placeholder = t('customName'); manual.value = sv.manual || ''; manual.autocomplete = 'off';
+    const pct = document.createElement('input');
+    pct.type = 'number'; pct.dataset.k = 'pct'; pct.placeholder = '%'; pct.min = '0'; pct.step = 'any'; pct.inputMode = 'decimal'; pct.value = sv.pct || '';
+    function sync() { manual.hidden = sel.value !== '__other'; }
+    sync();
+    [sel, manual, pct].forEach(el => el.addEventListener('input', () => { sync(); calculate(); }));
+    sel.addEventListener('change', () => { sync(); calculate(); });
+    const rm = document.createElement('button');
+    rm.type = 'button'; rm.className = 'no-print'; rm.textContent = '✕';
+    rm.setAttribute('aria-label', t('removeCustom'));
+    rm.addEventListener('click', () => { row.remove(); calculate(); });
+    row.append(sel, manual, pct, rm);
+    return row;
+  }
+  function renderCycSolvents(list) {
+    const box = get('cycSolvents'); box.textContent = '';
+    (list || []).forEach(sv => box.appendChild(cycSolventRow(sv)));
+  }
+  function readCycSolvents() {
+    return [...document.querySelectorAll('#cycSolvents .cd-row')].map(row => ({
+      name: row.querySelector('[data-k=name]').value,
+      manual: row.querySelector('[data-k=manual]').value,
+      pct: row.querySelector('[data-k=pct]').value
+    }));
+  }
+  function cycSolventList() {
+    return readCycSolvents().filter(a => a.name).map(a => ({
+      name: a.name === '__other' ? (a.manual.trim() || t('other')) : a.name,
+      pct: a.pct === '' ? NaN : Number(a.pct)
+    }));
+  }
+  function updateCyclization() {
+    const tbl = get('cycTable');
+    if (!last) { lastCyc = null; tbl.innerHTML = ''; get('cycSum').textContent = ''; return; }
+    const plan = C.cyclizationPlan({
+      scale: last.scale, theoretical: last.theoretical,
+      assay: readNum('assay'), concentration: readNum('cycConc'), iodineEq: readNum('iodineEq'),
+      solvents: cycSolventList()
+    });
+    lastCyc = plan;
+    const bad = plan.solvents.length && Math.abs(plan.pctSum - 100) > 0.01;
+    get('cycSum').textContent = plan.solvents.length ? t('cycSumMsg', { sum: C.formatNumber(plan.pctSum) }) : '';
+    get('cycSum').style.color = bad ? '#a42121' : '';
+    const rows = [
+      [t('cycEffPeptide'), { text: fmt(plan.effectivePeptide, 'g'), num: true }],
+      [plan.iodine.name + ' (' + C.formatNumber(plan.iodine.eq) + ' eq)', { text: fmt(plan.iodine.grams, 'g') + ' / ' + fmt(plan.iodine.mmol, 'mmol'), num: true }]
+    ];
+    plan.solvents.forEach(sv => rows.push([sv.name + ' (' + C.formatNumber(sv.pct) + '%)', { text: vol(sv.volume), num: true }]));
+    rows.push([t('cycTotalVolume'), { text: vol(plan.totalVolume), num: true }]);
+    tbl.innerHTML = table([t('thItem'), { text: t('thAmount'), num: true }], rows);
+  }
+  function updatePurification() {
+    const tbl = get('purifTable');
+    if (!last) { lastPurif = null; tbl.innerHTML = ''; return; }
+    const plan = C.purificationPlan({ theoretical: last.theoretical, acnPerG: readNum('acnPerG') });
+    lastPurif = plan;
+    tbl.innerHTML = table([t('thItem'), { text: t('thAmount'), num: true }], [
+      [t('purifTheory'), { text: fmt(last.theoretical, 'g'), num: true }],
+      ['Acetonitrile', { text: vol(plan.acnVolume), num: true }]
+    ]);
+  }
+
   /* ---------- materials summary ---------- */
   function updateSummary() {
     const tbl = get('summaryTable');
@@ -728,6 +833,18 @@
       lastCleavage.antisolvents.forEach(a => add(a.name, a.volume, 'mL'));
       const bw = lastCleavage.antisolventWashes.byName;
       Object.keys(bw).forEach(name => add(name, bw[name], 'mL'));
+    }
+    if (lastAcetyl) {
+      add(lastAcetyl.ac2o.name, lastAcetyl.ac2o.mL, 'mL');
+      add(lastAcetyl.collidine.name, lastAcetyl.collidine.mL, 'mL');
+      add(t('matDMF'), lastAcetyl.dmf, 'mL');
+    }
+    if (lastCyc) {
+      add(lastCyc.iodine.name, lastCyc.iodine.grams, 'g');
+      lastCyc.solvents.forEach(sv => add(sv.name, sv.volume, 'mL'));
+    }
+    if (lastPurif) {
+      add('Acetonitrile', lastPurif.acnVolume, 'mL');
     }
     const list = order.map(k => mats[k]).sort((a, b) => a.name.localeCompare(b.name));
     empty.hidden = list.length > 0 || !!(lastPlan && lastPlan.couplings > 0);
@@ -869,6 +986,7 @@
     renderReagentEqs(null);
     renderScavengers(DEFAULT_SCAVENGERS);
     renderAntisolvents(DEFAULT_ANTISOLVENTS);
+    renderCycSolvents(DEFAULT_CYC_SOLVENTS);
     renderAntiWashes(DEFAULT_ANTIWASHES);
   }
   function reset() {
@@ -882,7 +1000,7 @@
   renderSystemOptions();
   renderPads();
   applyDefaults();
-  MB_FIELDS.concat(SEQ_FIELDS, PLAN_FIELDS, CD_FIELDS).forEach(id => get(id).addEventListener('input', calculate));
+  MB_FIELDS.concat(SEQ_FIELDS, PLAN_FIELDS, CD_FIELDS, ACYC_FIELDS).forEach(id => get(id).addEventListener('input', calculate));
   ['nTerm', 'cTerm', 'nFmoc', 'skipFirst', 'swellTimes', 'swellVol', 'washesDeprot', 'washesCouple', 'coupleVol', 'deprotVol', 'washDeprotVol', 'washCoupleVol', 'tfaWashes'].forEach(id => get(id).addEventListener('change', calculate));
   get('resin').addEventListener('change', changeResin);
   get('system').addEventListener('change', changeSystem);
@@ -907,6 +1025,11 @@
     const row = antiWashRow({ pctA: '70', pctB: '30', washes: '4', volumesPerWash: '4' });
     get('antiWashes').appendChild(row);
     row.querySelector('input').focus();
+  });
+  get('addCycSolvent').addEventListener('click', () => {
+    const row = cycSolventRow({});
+    get('cycSolvents').appendChild(row);
+    row.querySelector('select').focus();
   });
   get('reset').addEventListener('click', reset);
   get('print').addEventListener('click', () => window.print());

@@ -9,7 +9,7 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
 
-  const APP_VERSION = '9.9';
+  const APP_VERSION = '10.0';
 
   // Average masses (g/mol)
   const H2O = 18.0153;
@@ -380,14 +380,59 @@
     };
   }
 
+  // Reagents used by the acetylation / cyclization / purification steps.
+  const AC2O = { name: 'Acetic anhydride', mw: 102.09, density: 1.080 };   // CAS 108-24-7
+  const IODINE = { name: 'Iodine (I₂)', mw: 253.808 };                     // CAS 7553-56-2
+  const ACN = { name: 'Acetonitrile', mw: 41.05, density: 0.786 };         // CAS 75-05-8
+
+  /* Acetylation (capping) with acetic anhydride + collidine, over a number of steps.
+   * o: { scale (mmol), resinMass (g), ac2oEq, collidineEq, steps, dmfVol (mL/g resin per step) } */
+  function acetylationPlan(o) {
+    const steps = o.steps || 0;
+    const reagent = (name, mw, density, eq) => {
+      const mmol = o.scale * eq * steps;
+      const grams = mmol * mw / 1000;
+      return { name, mw, eq, mmol, grams, mL: density ? grams / density : NaN };
+    };
+    const ac2o = reagent(AC2O.name, AC2O.mw, AC2O.density, o.ac2oEq);
+    const collidine = reagent('2,4,6-Collidine', 121.18, 0.917, o.collidineEq);
+    const dmf = o.resinMass * o.dmfVol * steps;
+    return { steps, ac2o, collidine, dmf };
+  }
+
+  /* Cyclization (e.g. disulfide with iodine). Peptide amount is taken after assay.
+   * o: { scale (mmol), theoretical (g, unprotected peptide), assay (%), concentration (g/L linear peptide),
+   *      iodineEq, solvents: [{ name, pct }] } */
+  function cyclizationPlan(o) {
+    const assay = o.assay / 100;
+    const effectivePeptide = o.theoretical * assay;                 // g of real peptide
+    const peptideMmol = o.scale * assay;                            // mmol after assay
+    const iodineMmol = o.iodineEq * peptideMmol;
+    const iodine = { name: IODINE.name, mw: IODINE.mw, eq: o.iodineEq, mmol: iodineMmol, grams: iodineMmol * IODINE.mw / 1000 };
+    const totalVolume = o.concentration > 0 ? effectivePeptide / o.concentration * 1000 : NaN;  // mL
+    const sol = (o.solvents || []).filter(s => s.name && s.pct > 0);
+    const solvents = sol.map(s => ({ name: s.name, pct: s.pct, volume: Number.isFinite(totalVolume) ? totalVolume * s.pct / 100 : NaN }));
+    const pctSum = sol.reduce((s, x) => s + x.pct, 0);
+    return { effectivePeptide, peptideMmol, iodine, totalVolume, solvents, pctSum };
+  }
+
+  /* Purification: acetonitrile scaled to the theoretical peptide mass.
+   * o: { theoretical (g), acnPerG (L acetonitrile / g theoretical peptide) } */
+  function purificationPlan(o) {
+    const acnVolume = o.theoretical * o.acnPerG * 1000; // mL
+    return { acnVolume };
+  }
+
   // Densities (g/mL) of the liquids the app can meter, so a price per kg can be applied to a volume.
   const DENSITY = {
     'dmf': 0.944, 'piperidine': 0.862, 'tfa': 1.489,
     'dic': 0.806, 'dipea': 0.742, 'nmm': 0.920, 'collidine': 0.917, '2,4,6-collidine': 0.917,
     'tis': 0.773, 'dms': 0.846, 'h2o': 1.0, 'h₂o': 1.0, 'water': 1.0,
     'thioanisole': 1.058, 'edt': 1.123,
-    'mtbe': 0.740, 'cold mtbe': 0.740, 'heptane': 0.684, 'diethyl ether': 0.713, 'hexane': 0.659, 'petroleum ether': 0.64
+    'mtbe': 0.740, 'cold mtbe': 0.740, 'heptane': 0.684, 'diethyl ether': 0.713, 'hexane': 0.659, 'petroleum ether': 0.64,
+    'acetic anhydride': 1.080, 'acetonitrile': 0.786, 'acn': 0.786, 'ethanol': 0.789, 'methanol': 0.792, 'acetic acid': 1.049
   };
+  const CYCLIZATION_SOLVENTS = ['Water', 'Acetonitrile', 'Ethanol', 'Methanol', 'Acetic acid'];
 
   // Normalise a material name for matching: lowercase, drop a trailing "(...)" tag, collapse spaces.
   function normalizeMaterial(name) {
@@ -490,6 +535,7 @@
     APP_VERSION, RESINS, RESIDUES, NONSTD, PG, REAGENTS, COUPLING_SYSTEMS, SCAVENGERS, ANTISOLVENTS, DENSITY,
     constants: { H2O, NH3, HCL, FMOC, ACETYL },
     massBalance, formatNumber, decimalsFor, customIndex, parseSequence, sequenceMW, buildingBlock, reagentAmount, couplingPlan, cleavagePlan,
+    acetylationPlan, cyclizationPlan, purificationPlan, CYCLIZATION_SOLVENTS,
     normalizeMaterial, normalizePriceUnit, densityOf, parsePrices, materialCost
   };
 });
