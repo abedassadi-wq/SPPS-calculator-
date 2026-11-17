@@ -255,6 +255,29 @@
         </div>
       </div>
     </div>
+
+    <h3 data-i18n="acetylTitle">Acetylation (capping)</h3>
+    <p class="hint" data-i18n="acetylHint">Acetic anhydride and collidine, over a number of capping steps. Reagent amounts are added to a DMF volume.</p>
+    <div class="grid">
+      <div class="field">
+        <label for="ac2oEq" data-i18n="ac2oEq">Acetic anhydride equivalents</label>
+        <input id="ac2oEq" type="number" inputmode="decimal" min="0" step="any" value="5">
+      </div>
+      <div class="field">
+        <label for="collidineEq" data-i18n="collidineEq">Collidine equivalents</label>
+        <input id="collidineEq" type="number" inputmode="decimal" min="0" step="any" value="5">
+      </div>
+      <div class="field">
+        <label for="acetylSteps" data-i18n="acetylSteps">Number of acetylation steps</label>
+        <input id="acetylSteps" type="number" inputmode="numeric" min="0" step="1" value="0">
+      </div>
+      <div class="field">
+        <label for="acetylDmfVol" data-i18n="acetylDmfVol">DMF (mL/g resin per step)</label>
+        <input id="acetylDmfVol" type="number" inputmode="decimal" min="0" step="any" list="volDL" value="6">
+      </div>
+    </div>
+    <div class="table-wrap"><table id="acetylTable"></table></div>
+
     <div id="planError" class="error" role="alert" hidden></div>
 
     <h3 data-i18n="perCoupling">Per coupling</h3>
@@ -332,7 +355,46 @@
   </section>
 
   <section class="card">
-    <h2 data-i18n="s7">7. Materials summary</h2>
+    <h2 data-i18n="s7">7. Cyclization</h2>
+    <p class="hint" data-i18n="cycIntro">Iodine (e.g. disulfide formation) and the dissolution solvents for the linear peptide. Amounts use the peptide after assay.</p>
+    <div id="cycError" class="error" role="alert" hidden></div>
+    <div class="grid">
+      <div class="field">
+        <label for="assay" data-i18n="assay">Assay of crude peptide (%)</label>
+        <input id="assay" type="number" inputmode="decimal" min="0" max="100" step="any" value="50">
+      </div>
+      <div class="field">
+        <label for="iodineEq" data-i18n="iodineEq">Iodine equivalents</label>
+        <input id="iodineEq" type="number" inputmode="decimal" min="0" step="any" value="1">
+      </div>
+      <div class="field span2">
+        <label for="cycConc" data-i18n="cycConc">Required linear-peptide concentration (g/L)</label>
+        <input id="cycConc" type="number" inputmode="decimal" min="0" step="any" value="100">
+      </div>
+    </div>
+    <p class="hint" data-i18n="cycSolventsTitle">Dissolution solvents (choose, with each percent):</p>
+    <div id="cycSolvents" class="cd-list"></div>
+    <div class="actions no-print">
+      <button type="button" id="addCycSolvent" data-i18n="addCycSolvent">Add solvent</button>
+    </div>
+    <p class="hint" id="cycSum"></p>
+    <div class="table-wrap"><table id="cycTable"></table></div>
+  </section>
+
+  <section class="card">
+    <h2 data-i18n="s8">8. Purification</h2>
+    <p class="hint" data-i18n="purifHint">Acetonitrile scaled to the theoretical unprotected peptide mass (section 4).</p>
+    <div class="grid">
+      <div class="field span2">
+        <label for="acnPerG" data-i18n="acnPerG">Acetonitrile (L per g theoretical peptide)</label>
+        <input id="acnPerG" type="number" inputmode="decimal" min="0" step="any" value="0.5">
+      </div>
+    </div>
+    <div class="table-wrap"><table id="purifTable"></table></div>
+  </section>
+
+  <section class="card">
+    <h2 data-i18n="s9">9. Materials summary</h2>
     <p class="hint" data-i18n="summaryHint">Everything used across the whole process. Amounts above 1000 mL or 1000 g are shown in L or kg (2 decimals).</p>
     <div class="actions no-print">
       <a class="btn" id="downloadTemplate" href="./prices-template.csv" download="spps-prices-template.csv" data-i18n="downloadTemplate">Download price template</a>
