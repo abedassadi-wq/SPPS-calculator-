@@ -869,6 +869,8 @@
       if (!mats[key]) { mats[key] = { name, unit, value: 0 }; order.push(key); }
       mats[key].value += value;
     }
+    // The initial dry resin is part of the raw-material cost.
+    add(get('resin').selectedOptions[0].text, last.mass, 'g');
     if (lastPlan) {
       lastPlan.aaTotals.forEach(a => add(a.name, a.grams, 'g'));
       lastPlan.reagentTotals.forEach(r => { if (Number.isFinite(r.mL)) add(r.name, r.mL, 'mL'); else add(r.name, r.grams, 'g'); });
