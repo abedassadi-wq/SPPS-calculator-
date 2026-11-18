@@ -79,7 +79,7 @@ test('non-natural residues in brackets', () => {
   // Thpgly is kept as an alias of the corrected Thp residue
   close(C.buildingBlock('Thpgly').mw, 367.40);
   // Only the agreed list is built in
-  assert.deepEqual(Object.keys(C.NONSTD), ['Pen', 'Sar', '3Pal', '2Nal', 'Thp', '7MeTrp', 'Lys(Ac)', 'Tyr(2-Boc-ea)']);
+  assert.deepEqual(Object.keys(C.NONSTD), ['Pen', 'Sar', '3Pal', '2Nal', 'Thp', '7MeTrp', 'Lys(Ac)', 'Tyr(2-Boc-ea)', 'AEEA', 'Lys(ivDde)', 'Glu-OtBu', 'C18diacidOtBu', 'SemaSideChain']);
   assert.equal(C.parseSequence('[Aib]').invalid.length, 1);
   // Boc on Tyr(2-ea) counts towards the protected MW only
   const s = C.sequenceMW('[Tyr(2-Boc-ea)]', { cTerm: 'acid' });
@@ -337,4 +337,18 @@ test('final washes (resin, per solvent)', () => {
   // rows with no solvent or zero counts are ignored
   const p2 = C.couplingPlan({ scale: 100, resinMass: 125, residues: [], aaEq: 3, reagents: [], finalWashes: [{ solvent: '', washes: 3, vol: 5 }, { solvent: 'DMF', washes: 0, vol: 5 }] });
   close(p2.finalWashes.total, 0);
+});
+
+test('semaglutide-type building blocks', () => {
+  close(C.buildingBlock('AEEA').mw, 385.41, 0.02);
+  close(C.buildingBlock('Lys(ivDde)').mw, 574.72, 0.02);
+  close(C.buildingBlock('Glu-OtBu').mw, 425.47, 0.02);
+  // non-Fmoc building blocks use the explicit catalogue MW
+  close(C.buildingBlock('C18diacidOtBu').mw, 370.57, 0.02);
+  close(C.buildingBlock('SemaSideChain').mw, 846.10, 0.02);
+  assert.equal(C.buildingBlock('AEEA').name, 'Fmoc-AEEA-OH');
+  assert.equal(C.buildingBlock('C18diacidOtBu').name, 'Octadecanedioic acid mono-tBu');
+  // aliases resolve
+  assert.equal(C.parseSequence('[PEG2]').invalid.length, 0);
+  assert.equal(C.parseSequence('[Fmoc-Glu-OtBu]').invalid.length, 0);
 });

@@ -9,7 +9,7 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
 
-  const APP_VERSION = '10.2';
+  const APP_VERSION = '10.3';
 
   // Average masses (g/mol)
   const H2O = 18.0153;
@@ -137,7 +137,16 @@
     '7MeTrp':        { code: '7-MeTrp', mass: 200.2256, aliases: ['7-MeTrp', '7-Me-Trp'] },       // 7-methyltryptophan, unprotected indole
     'Lys(Ac)':       { code: 'Lys(Ac)', mass: 170.2090, bb: 'Fmoc-Lys(Ac)-OH' },                  // N6-acetyl-lysine (acetyl is permanent, not a protecting group)
     'Tyr(2-Boc-ea)': { code: 'Tyr(2-ea)', mass: 206.2411, pg: 'Boc', bb: 'Fmoc-Tyr(2-Boc-ea)-OH',
-                       aliases: ['Tyr(ea)', 'Tyr(2-ea)'] }                                         // O-(2-aminoethyl)tyrosine, Boc on the amine
+                       aliases: ['Tyr(ea)', 'Tyr(2-ea)'] },                                        // O-(2-aminoethyl)tyrosine, Boc on the amine
+    'AEEA':          { code: 'AEEA', mass: 145.1580, bb: 'Fmoc-AEEA-OH',
+                       aliases: ['Fmoc-AEEA', 'PEG2', 'Ebes', 'AEEA-OH'] },                        // 8-amino-3,6-dioxaoctanoic acid (PEG2 spacer), CAS 166108-71-0
+    'Lys(ivDde)':    { code: 'Lys(ivDde)', mass: 128.1723, pgMass: 206.2920, bb: 'Fmoc-Lys(ivDde)-OH' }, // CAS 204777-78-6
+    'Glu-OtBu':      { code: 'Glu-OtBu', mass: 129.1140, pg: 'OtBu', bb: 'Fmoc-Glu-OtBu',
+                       aliases: ['Fmoc-Glu-OtBu'] },                                               // Fmoc-L-Glu alpha-tBu ester (side-chain free), CAS 84793-07-7
+    'C18diacidOtBu': { code: 'C18-diacid(OtBu)', mass: 296.4510, pgMass: 56.1063, bbMW: 370.57, bb: 'Octadecanedioic acid mono-tBu',
+                       aliases: ['C18 diacid', 'Octadecanedioic mono-tBu', 'Boc-C16-COOH'] },      // octadecanedioic acid mono-tert-butyl ester, CAS 843666-40-0
+    'SemaSideChain': { code: 'Sema side chain', mass: 715.8700, pgMass: 112.2126, bbMW: 846.10, bb: 'Semaglutide side chain (AEEA-AEEA-gGlu-C18)',
+                       aliases: ['Semaglutide side chain', 'Sema-side-chain'] }                    // tBuO-Ste-Glu(AEEA-AEEA-OH)-OtBu, CAS 1118767-16-0
   };
 
   // Case-insensitive lookup for bracket contents: non-natural keys and aliases, plus three-letter standard codes.
@@ -148,9 +157,9 @@
   Object.keys(RESIDUES).forEach(ch => { BRACKET_INDEX[RESIDUES[ch].code.toLowerCase()] = RESIDUES[ch]; });
 
   function info(def, d, label) {
-    const pgMass = def.pg ? PG[def.pg] : 0;
+    const pgMass = def.pgMass != null ? def.pgMass : (def.pg ? PG[def.pg] : 0);
     return {
-      label, code: def.code, d, mass: def.mass, pg: def.pg || null, pgMass,
+      label, code: def.code, d, mass: def.mass, pg: def.pg || null, pgMass, bbMW: def.bbMW,
       bbName: def.bb
         ? def.bb.replace('Fmoc-', 'Fmoc-' + (d ? 'D-' : ''))
         : 'Fmoc-' + (d ? 'D-' : '') + def.code + (def.pg ? '(' + def.pg + ')' : '') + '-OH'
@@ -233,7 +242,7 @@
       if (parsed.residues.length !== 1 || parsed.invalid.length) return null;
       r = parsed.residues[0];
     }
-    return { name: r.bbName, mw: r.mass + H2O + FMOC + r.pgMass };
+    return { name: r.bbName, mw: r.bbMW != null ? r.bbMW : r.mass + H2O + FMOC + r.pgMass };
   }
 
   /* Reagent amounts for one coupling at a given scale (mmol). */
